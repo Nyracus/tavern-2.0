@@ -1,11 +1,23 @@
-import { Router } from 'express';
-import { authController } from '../controllers/auth.controller';
-import { requireAuth } from '../middleware/auth.middleware';
+import { Router } from "express";
+import { validateRequest } from "../middleware/validation.middleware";
+import { loginSchema, registerSchema } from "../schemas/auth.schema";
+import { verifyToken } from "../middleware/auth.middleware";
+import { authController } from "../controllers/auth.controller";
 
 const router = Router();
 
-router.post('/register', (req, res, next) => authController.register(req, res, next));
-router.post('/login', (req, res, next) => authController.login(req, res, next));
-router.get('/me', requireAuth, (req, res, next) => authController.me(req, res, next));
+router.post(
+  "/register",
+  validateRequest(registerSchema),
+  authController.register
+);
+
+router.post(
+  "/login",
+  validateRequest(loginSchema),
+  authController.login
+);
+
+router.get("/me", verifyToken, authController.me);
 
 export default router;

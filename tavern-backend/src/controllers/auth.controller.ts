@@ -1,29 +1,42 @@
-import { Request, Response, NextFunction } from 'express';
-import { registerSchema, loginSchema } from '../schemas/auth.schema';
-import { authService } from '../services/auth.service';
+import { Response, NextFunction } from "express";
+import { authService } from "../services/auth.service";
+import { RegisterInput, LoginInput } from "../schemas/auth.schema";
+import { AuthRequest } from "../middleware/auth.middleware";
 
-export class AuthController {
-  async register(req: Request, res: Response, next: NextFunction) {
+class AuthController {
+  async register(req: AuthRequest, res: Response, next: NextFunction) {
     try {
-      const data = registerSchema.parse(req.body);
-      const result = await authService.register(data);
-      res.status(201).json({ success: true, ...result });
-    } catch (err) { next(err); }
+      const input = req.body as RegisterInput;
+      const result = await authService.register(input);
+      return res.status(201).json({ success: true, ...result });
+    } catch (err) {
+      next(err);
+    }
   }
 
-  async login(req: Request, res: Response, next: NextFunction) {
+  async login(req: AuthRequest, res: Response, next: NextFunction) {
     try {
-      const data = loginSchema.parse(req.body);
-      const result = await authService.login(data);
-      res.json({ success: true, ...result });
-    } catch (err) { next(err); }
+      const input = req.body as LoginInput;
+      const result = await authService.login(input);
+      return res.json({ success: true, ...result });
+    } catch (err) {
+      next(err);
+    }
   }
 
-  async me(req: Request, res: Response, next: NextFunction) {
+  async me(req: AuthRequest, res: Response, next: NextFunction) {
     try {
-      const result = await authService.me(req.user!.id);
-      res.json({ success: true, user: result });
-    } catch (err) { next(err); }
+      if (!req.userId) {
+        return res
+          .status(401)
+          .json({ success: false, message: "Unauthenticated" });
+      }
+
+      const user = await authService.me(req.userId);
+      return res.json({ success: true, user });
+    } catch (err) {
+      next(err);
+    }
   }
 }
 

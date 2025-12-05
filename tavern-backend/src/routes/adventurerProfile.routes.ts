@@ -1,48 +1,52 @@
 // src/routes/adventurerProfile.routes.ts
-import { Router } from 'express';
-import { adventurerProfileController } from '../controllers/adventurerProfile.controller';
-import { requireAuth, requireRole } from '../middleware/auth.middleware';
+import { Router } from "express";
+import { verifyToken, authorizeRole } from "../middleware/auth.middleware";
+import { adventurerProfileController } from "../controllers/adventurerProfile.controller";
 
 const router = Router();
 
-// All routes below require the user to be an authenticated ADVENTURER
-const onlyAdventurers = [requireAuth, requireRole('ADVENTURER')] as const;
-
+// NOTE: plural "adventurers" to match frontend: /api/adventurers/me
 router.get(
-  '/me',
-  ...onlyAdventurers,
-  (req, res, next) => adventurerProfileController.getMyProfile(req, res, next)
+  "/adventurers/me",
+  verifyToken,
+  authorizeRole("ADVENTURER"),
+  adventurerProfileController.getMyProfile.bind(adventurerProfileController)
 );
 
 router.post(
-  '/me',
-  ...onlyAdventurers,
-  (req, res, next) => adventurerProfileController.createMyProfile(req, res, next)
+  "/adventurers/me",
+  verifyToken,
+  authorizeRole("ADVENTURER"),
+  adventurerProfileController.createMyProfile.bind(adventurerProfileController)
 );
 
 router.patch(
-  '/me',
-  ...onlyAdventurers,
-  (req, res, next) => adventurerProfileController.updateMyProfile(req, res, next)
+  "/adventurers/me",
+  verifyToken,
+  authorizeRole("ADVENTURER"),
+  adventurerProfileController.updateMyProfile.bind(adventurerProfileController)
 );
 
-// Skill management
+// Skills
 router.post(
-  '/me/skills',
-  ...onlyAdventurers,
-  (req, res, next) => adventurerProfileController.addSkill(req, res, next)
+  "/adventurers/me/skills",
+  verifyToken,
+  authorizeRole("ADVENTURER"),
+  adventurerProfileController.addSkill.bind(adventurerProfileController)
 );
 
 router.patch(
-  '/me/skills/:skillId',
-  ...onlyAdventurers,
-  (req, res, next) => adventurerProfileController.updateSkill(req, res, next)
+  "/adventurers/me/skills/:skillId",
+  verifyToken,
+  authorizeRole("ADVENTURER"),
+  adventurerProfileController.updateSkill.bind(adventurerProfileController)
 );
 
 router.delete(
-  '/me/skills/:skillId',
-  ...onlyAdventurers,
-  (req, res, next) => adventurerProfileController.deleteSkill(req, res, next)
+  "/adventurers/me/skills/:skillId",
+  verifyToken,
+  authorizeRole("ADVENTURER"),
+  adventurerProfileController.deleteSkill.bind(adventurerProfileController)
 );
 
 export default router;

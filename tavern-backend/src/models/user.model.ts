@@ -1,20 +1,23 @@
 // src/models/user.model.ts
 import { Schema, model, Document } from "mongoose";
 
-export type UserRole = "ADVENTURER" | "NPC" | "GUILD_MASTER";
+export type Role = "ADVENTURER" | "NPC" | "GUILD_MASTER";
 
-export interface IUser extends Document {
+export interface UserDocument extends Document {
   email: string;
   username: string;
   displayName: string;
   avatarUrl?: string;
-  role: UserRole;
-  password: string;
+  role: Role;
+  password: string;       // <-- merged from JS model
   createdAt: Date;
   updatedAt: Date;
 }
 
-const UserSchema = new Schema<IUser>(
+export type IUser = UserDocument;
+
+
+const UserSchema = new Schema<UserDocument>(
   {
     email: { type: String, required: true, unique: true },
     username: { type: String, required: true, unique: true },
@@ -25,10 +28,13 @@ const UserSchema = new Schema<IUser>(
       enum: ["ADVENTURER", "NPC", "GUILD_MASTER"],
       default: "ADVENTURER",
     },
-    password: { type: String, required: true },
+    password: {
+      type: String,
+      required: true,
+      select: false, // common in auth: exclude by default
+    },
   },
   { timestamps: true }
 );
 
-export const UserModel = model<IUser>("User", UserSchema);
-
+export const UserModel = model<UserDocument>("User", UserSchema);

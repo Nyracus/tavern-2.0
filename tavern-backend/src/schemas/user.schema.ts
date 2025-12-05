@@ -11,6 +11,7 @@ export const createUserSchema = z.object({
   displayName: z.string().min(1, 'Display name is required'),
   avatarUrl: z.string().url().optional().or(z.literal('')),
   role: userRoleSchema.optional(),
+  password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
 export const updateUserSchema = z.object({

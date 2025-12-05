@@ -9,8 +9,11 @@ import Dashboard from "./pages/Dashboard";
 import Protected from "./components/Protected";
 
 const router = createBrowserRouter([
+  // public routes
   { path: "/login", element: <Login /> },
   { path: "/register", element: <Register /> },
+
+  // protected app root
   {
     path: "/",
     element: (

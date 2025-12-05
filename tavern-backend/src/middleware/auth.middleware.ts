@@ -1,32 +1,53 @@
-import { NextFunction, Request, Response } from 'express';
-import { verifyJwt } from '../config/jwt.config';
-import { AppError } from './error.middleware';
+import { NextFunction, Request, Response } from "express";
+import jwt from "jsonwebtoken";
+import { JWT_SECRET } from "../config/jwt.config";
+import { AppError } from "./error.middleware";
+import type { Role } from "../models/user.model";
 
-declare global {
-  namespace Express {
-    interface Request {
-      user?: { id: string; role: 'ADVENTURER' | 'NPC' | 'GUILD_MASTER' };
-    }
-  }
+export interface AuthRequest extends Request {
+  userId?: string;
+  userRole?: Role;
 }
 
-export const requireAuth = (req: Request, res: Response, next: NextFunction) => {
-  const header = req.headers.authorization || '';
-  const token = header.startsWith('Bearer ') ? header.substring(7) : null;
-  if (!token) return next(new AppError(401, 'Missing Authorization header'));
+interface JwtPayload extends jwt.JwtPayload {
+  sub?: string;
+  role?: Role;
+}
+
+export const verifyToken = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  const header = req.headers.authorization;
+
+  if (!header || !header.startsWith("Bearer ")) {
+    return next(new AppError(401, "Unauthenticated"));
+  }
+
+  const token = header.split(" ")[1];
 
   try {
-    const payload = verifyJwt(token);
-    req.user = { id: payload.sub, role: payload.role };
-    return next();
+    const payload = jwt.verify(token, JWT_SECRET) as JwtPayload;
+
+    if (!payload.sub) {
+      return next(new AppError(401, "Invalid token"));
+    }
+
+    (req as AuthRequest).userId = payload.sub;
+    (req as AuthRequest).userRole = payload.role;
+    next();
   } catch {
-    return next(new AppError(401, 'Invalid or expired token'));
+    return next(new AppError(401, "Invalid token"));
   }
 };
 
-export const requireRole = (...roles: Array<'ADVENTURER' | 'NPC' | 'GUILD_MASTER'>) =>
-  (req: Request, _res: Response, next: NextFunction) => {
-    if (!req.user) return next(new AppError(401, 'Not authenticated'));
-    if (!roles.includes(req.user.role)) return next(new AppError(403, 'Forbidden'));
+export const authorizeRole =
+  (...allowed: Role[]) =>
+  (req: Request, res: Response, next: NextFunction) => {
+    const { userRole } = req as AuthRequest;
+    if (!userRole || !allowed.includes(userRole)) {
+      return next(new AppError(403, "Forbidden"));
+    }
     next();
   };

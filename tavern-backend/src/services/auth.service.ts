@@ -30,7 +30,7 @@ export class AuthService {
       password: hash,
     });
 
-    // 👇 Make sure sub is a string and don't fight TS on _id type
+   
     const token = signJwt({
       sub: String((user as any)._id),
       role: user.role,
@@ -47,7 +47,7 @@ export class AuthService {
         { username: data.emailOrUsername },
       ],
     }).select("+password");
-
+    
     if (!user) {
       throw new AppError(401, "Invalid credentials");
     }
@@ -66,12 +66,17 @@ export class AuthService {
   }
 
   async me(userId: string) {
+    if (!userId) {
+      throw new AppError(401, "Unauthenticated");
+    }
+
     const userDoc = await UserModel.findById(userId).lean<IUser>();
     if (!userDoc) {
       throw new AppError(404, "User not found");
     }
     return this.publicUser(userDoc);
   }
+
 
   // 👇 Be lenient here to avoid type headaches around _id
   publicUser(u: any) {

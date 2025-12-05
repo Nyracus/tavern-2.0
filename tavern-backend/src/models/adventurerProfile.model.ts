@@ -75,3 +75,6 @@ export const AdventurerProfileModel = model<IAdventurerProfile>(
   'AdventurerProfile',
   AdventurerProfileSchema
 );
+
+
+export { AdventurerProfileModel as Adventurer };
