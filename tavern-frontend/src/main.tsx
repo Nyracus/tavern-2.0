@@ -8,6 +8,7 @@ import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import Protected from "./components/Protected";
 import AdventurerLeaderboard from "./pages/AdventurerLeaderboard";
+import AdminAnomalies from "./pages/AdminAnomalies";
 
 
 const router = createBrowserRouter([
@@ -29,6 +30,14 @@ const router = createBrowserRouter([
     element: (
       <Protected>
         <AdventurerLeaderboard />
+      </Protected>
+    ),
+  },
+  {
+    path: "/admin/anomalies",
+    element: (
+      <Protected roles={["GUILD_MASTER"]}>
+        <AdminAnomalies />
       </Protected>
     ),
   },
