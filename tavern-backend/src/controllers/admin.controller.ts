@@ -8,8 +8,10 @@ export class AdminController {
    */
   async scanAnomalies(req: Request, res: Response, next: NextFunction) {
     try {
-      const anomalies = await anomalyService.scanAll();
-      res.status(201).json({ success: true, data: anomalies });
+      const generalAnomalies = await anomalyService.scanAll();
+      const deadlineAnomalies = await anomalyService.scanDeadlineAnomalies();
+      const allAnomalies = [...generalAnomalies, ...deadlineAnomalies];
+      res.status(201).json({ success: true, data: allAnomalies });
     } catch (err) {
       next(err);
     }

@@ -59,6 +59,46 @@ export class AnomalyService {
     return anomalies;
   }
 
+  /**
+   * Scan for quests with passed deadlines that haven't been completed
+   */
+  async scanDeadlineAnomalies(): Promise<AnomalyDocument[]> {
+    const anomalies: AnomalyDocument[] = [];
+    const now = new Date();
+
+    // Find all accepted quests with deadlines that have passed
+    const overdueQuests = await Quest.find({
+      status: "Accepted",
+      deadline: { $exists: true, $lt: now },
+    })
+      .populate("adventurerId", "username displayName")
+      .exec();
+
+    for (const quest of overdueQuests) {
+      // Check if anomaly already exists for this quest
+      const existingAnomaly = await AnomalyModel.findOne({
+        questId: quest._id,
+        type: "QUEST_DEADLINE_PASSED",
+        status: { $in: ["OPEN", "ACKNOWLEDGED"] },
+      }).exec();
+
+      if (!existingAnomaly && quest.adventurerId) {
+        const doc = await AnomalyModel.create({
+          subjectUserId: quest.adventurerId._id as Types.ObjectId,
+          subjectRole: "ADVENTURER",
+          type: "QUEST_DEADLINE_PASSED",
+          severity: "HIGH",
+          summary: `Quest "${quest.title}" deadline has passed without completion.`,
+          details: `Quest deadline was ${quest.deadline?.toISOString()}, but quest is still not completed.`,
+          questId: quest._id,
+        });
+        anomalies.push(doc);
+      }
+    }
+
+    return anomalies;
+  }
+
   async listAll(): Promise<AnomalyDocument[]> {
     return AnomalyModel.find().sort({ createdAt: -1 }).populate("subjectUserId").exec();
   }

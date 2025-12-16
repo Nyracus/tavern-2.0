@@ -5,7 +5,10 @@ import adventurerProfileRoutes from "./adventurerProfile.routes";
 import questRoutes from "./quest.routes";
 import workloadRoutes from "./workload.routes";
 import leaderboardRoutes from "./leaderboard.routes";
+import chatRoutes from "./chat.routes";
 import adminRoutes from "./admin.routes";
+import notificationRoutes from "./notification.routes";
+import skillShopRoutes from "./skillShop.routes";
 
 
 const router = Router();
@@ -23,6 +26,9 @@ router.use("/", questRoutes);
 router.use("/", workloadRoutes);
 router.use("/", leaderboardRoutes);
 router.use("/admin", adminRoutes);
+router.use("/", chatRoutes);
+router.use("/", notificationRoutes);
+router.use("/", skillShopRoutes);
 
 
 export default router;

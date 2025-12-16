@@ -9,13 +9,24 @@ import {
   decideApplication,
   submitCompletion,
   payQuest,
+  updateQuest,
+  deleteQuest,
+  getRecommendedQuests,
 } from "../controllers/quest.controller";
 import { enforceWorkloadLimit } from "../controllers/workload.controller";
+import { uploadQuestReport, uploadMiddleware } from "../controllers/storage.controller";
 
 const router = Router();
 
 // Public / shared quest browsing
 router.get("/quests", verifyToken, listQuests);
+// Quest recommendations for adventurers
+router.get(
+  "/quests/recommended",
+  verifyToken,
+  authorizeRole("ADVENTURER"),
+  getRecommendedQuests
+);
 
 // NPC employer: create and manage quests
 router.post(
@@ -29,6 +40,18 @@ router.get(
   verifyToken,
   authorizeRole("NPC"),
   listMyPostedQuests
+);
+router.patch(
+  "/quests/:questId",
+  verifyToken,
+  authorizeRole("NPC"),
+  updateQuest
+);
+router.delete(
+  "/quests/:questId",
+  verifyToken,
+  authorizeRole("NPC"),
+  deleteQuest
 );
 router.post(
   "/quests/:questId/applications/:applicationId/decision",
@@ -62,6 +85,15 @@ router.post(
   verifyToken,
   authorizeRole("ADVENTURER"),
   submitCompletion
+);
+
+// File upload endpoint for quest reports
+router.post(
+  "/quests/upload-report",
+  verifyToken,
+  authorizeRole("ADVENTURER"),
+  uploadMiddleware,
+  uploadQuestReport
 );
 
 export default router;
