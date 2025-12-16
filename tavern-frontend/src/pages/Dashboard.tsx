@@ -3,10 +3,14 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import AdventurerProfileManager from "../components/AdventurerProfileManager";
 import { useWorkload } from "../hooks/useWorkload";
+import QuestChat from "../components/QuestChat";
+import { useState } from "react";
 
 export default function Dashboard() {
   const { user, logout } = useAuth();
   const { data: workload } = useWorkload();
+  const [showChatDemo, setShowChatDemo] = useState(false);
+  const [demoQuestId, setDemoQuestId] = useState("");
 
   return (
     <div className="min-h-screen bg-linear-to-b from-slate-900 via-slate-950 to-black text-slate-100">
@@ -92,6 +96,41 @@ export default function Dashboard() {
 
         {/* Feature 1: Adventurer profile & skills */}
         <AdventurerProfileManager />
+
+        {/* Quest Chat Demo Section */}
+        <section className="rounded-2xl border border-purple-500/40 bg-slate-900/70 p-4 md:p-5 space-y-3">
+          <h2 className="text-lg font-semibold flex items-center gap-2">
+            💬 Quest Chat Channels
+          </h2>
+          <p className="text-sm text-slate-300">
+            Enter a Quest ID to access its chat channel. Only the NPC owner and
+            assigned adventurer can access each quest's chat.
+          </p>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={demoQuestId}
+              onChange={(e) => setDemoQuestId(e.target.value)}
+              placeholder="Enter Quest ID"
+              className="flex-1 px-3 py-2 bg-slate-800/80 border border-slate-600/40 rounded-lg text-sm text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+            />
+            <button
+              onClick={() => setShowChatDemo(!!demoQuestId)}
+              disabled={!demoQuestId}
+              className="px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-slate-700 disabled:text-slate-500 text-white rounded-lg text-sm font-medium transition-colors"
+            >
+              Open Chat
+            </button>
+          </div>
+          {showChatDemo && demoQuestId && (
+            <div className="mt-4">
+              <QuestChat
+                questId={demoQuestId}
+                questTitle={`Quest #${demoQuestId.slice(0, 8)}...`}
+              />
+            </div>
+          )}
+        </section>
       </div>
     </div>
   );
