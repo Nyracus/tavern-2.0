@@ -1,8 +1,17 @@
 // src/config/supabase.config.ts
 import 'dotenv/config';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.SUPABASE_URL as string;
-const supabaseAnonKey = process.env.SUPABASE_ANON_KEY as string;
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Only create Supabase client if both URL and key are provided
+export const supabase: SupabaseClient | null = 
+  supabaseUrl && supabaseAnonKey
+    ? createClient(supabaseUrl, supabaseAnonKey)
+    : null;
+
+// Helper to check if Supabase is configured
+export const isSupabaseConfigured = (): boolean => {
+  return supabase !== null;
+};

@@ -7,6 +7,12 @@ import type { Role } from "../models/user.model";
 export interface AuthRequest extends Request {
   userId?: string;
   userRole?: Role;
+  user?: {
+    _id: string;
+    username: string;
+    displayName: string;
+    role: Role;
+  };
 }
 
 interface JwtPayload extends jwt.JwtPayload {

@@ -11,6 +11,7 @@ export type User = {
   displayName: string;
   avatarUrl?: string | null;
   role: Role;
+  gold?: number;
 };
 
 type AuthCtx = {

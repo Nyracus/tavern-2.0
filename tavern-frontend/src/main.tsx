@@ -3,11 +3,19 @@ import ReactDOM from "react-dom/client";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import "./index.css";
 import { AuthProvider } from "./context/AuthContext";
+import { NotificationProvider } from "./lib/notifications";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import Protected from "./components/Protected";
 import AdventurerLeaderboard from "./pages/AdventurerLeaderboard";
+import AdminAnomalies from "./pages/AdminAnomalies";
+import NPCQuestBoard from "./pages/NPCQuestBoard";
+import NPCApplications from "./pages/NPCApplications";
+import NPCCompletions from "./pages/NPCCompletions";
+import AdventurerQuestBoard from "./pages/AdventurerQuestBoard";
+import AdventurerApplications from "./pages/AdventurerApplications";
+import GuildmasterChats from "./pages/GuildmasterChats";
 
 
 const router = createBrowserRouter([
@@ -32,12 +40,70 @@ const router = createBrowserRouter([
       </Protected>
     ),
   },
+  {
+    path: "/admin/anomalies",
+    element: (
+      <Protected roles={["GUILD_MASTER"]}>
+        <AdminAnomalies />
+      </Protected>
+    ),
+  },
+  {
+    path: "/npc/quests",
+    element: (
+      <Protected roles={["NPC"]}>
+        <NPCQuestBoard />
+      </Protected>
+    ),
+  },
+  {
+    path: "/npc/applications",
+    element: (
+      <Protected roles={["NPC"]}>
+        <NPCApplications />
+      </Protected>
+    ),
+  },
+  {
+    path: "/npc/completions",
+    element: (
+      <Protected roles={["NPC"]}>
+        <NPCCompletions />
+      </Protected>
+    ),
+  },
+  {
+    path: "/adventurer/quests",
+    element: (
+      <Protected roles={["ADVENTURER"]}>
+        <AdventurerQuestBoard />
+      </Protected>
+    ),
+  },
+  {
+    path: "/adventurer/applications",
+    element: (
+      <Protected roles={["ADVENTURER"]}>
+        <AdventurerApplications />
+      </Protected>
+    ),
+  },
+  {
+    path: "/admin/chats",
+    element: (
+      <Protected roles={["GUILD_MASTER"]}>
+        <GuildmasterChats />
+      </Protected>
+    ),
+  },
 ]);
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <AuthProvider>
-      <RouterProvider router={router} />
+      <NotificationProvider>
+        <RouterProvider router={router} />
+      </NotificationProvider>
     </AuthProvider>
   </React.StrictMode>
 );

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { api } from "../lib/api";
+import SkillsShop from "./SkillsShop";
 
 type AdventurerSkill = {
   _id: string;
@@ -128,11 +129,11 @@ export default function AdventurerProfileManager() {
   const { token, user } = useAuth();
   const [profile, setProfile] = useState<AdventurerProfile | null>(null);
   const [form, setForm] = useState<ProfileForm>(emptyForm);
-  const [skillForm, setSkillForm] = useState<SkillForm>(emptySkillForm);
   const [loading, setLoading] = useState(true);
   const [savingProfile, setSavingProfile] = useState(false);
-  const [savingSkill, setSavingSkill] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [editingProfile, setEditingProfile] = useState(false);
+  const [userGold, setUserGold] = useState<number>(0);
 
   // Load existing profile on mount
   useEffect(() => {
@@ -144,7 +145,7 @@ export default function AdventurerProfileManager() {
 
     let cancelled = false;
 
-    const load = async () => {
+    const loadProfile = async () => {
       setLoading(true);
       setError(null);
       try {
@@ -183,12 +184,64 @@ export default function AdventurerProfileManager() {
       }
     };
 
-    void load();
+    void loadProfile();
 
     return () => {
       cancelled = true;
     };
   }, [token]);
+
+  // Load user gold
+  useEffect(() => {
+    if (token && user?.role === "ADVENTURER") {
+      loadUserGold();
+    }
+  }, [token, user]);
+
+  // Listen for profile updates from skills shop
+  useEffect(() => {
+    const handleProfileUpdate = async () => {
+      if (token) {
+        setLoading(true);
+        try {
+          const res = await api.get<ApiResponse<AdventurerProfile>>(
+            "/adventurers/me",
+            token
+          );
+          setProfile(res.data);
+          setForm({
+            title: res.data.title,
+            summary: res.data.summary,
+            charClass: res.data.class,
+            level: res.data.level,
+            race: res.data.race ?? "",
+            background: res.data.background ?? "",
+            attributes: res.data.attributes,
+          });
+          await loadUserGold();
+        } catch (err) {
+          console.error("Failed to refresh profile", err);
+        } finally {
+          setLoading(false);
+        }
+      }
+    };
+    window.addEventListener('profileUpdated', handleProfileUpdate);
+    return () => window.removeEventListener('profileUpdated', handleProfileUpdate);
+  }, [token]);
+
+  const loadUserGold = async () => {
+    if (!token) return;
+    try {
+      const res = await api.get<{ success: boolean; user: { gold?: number } }>(
+        "/auth/me",
+        token
+      );
+      setUserGold(res.user?.gold || 0);
+    } catch (err) {
+      console.error("Failed to load gold", err);
+    }
+  };
 
   const handleProfileChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -244,6 +297,7 @@ export default function AdventurerProfileManager() {
       setProfile(res.data);
       // keep form in sync, including possibly updated level from backend
       setForm((prev) => ({ ...prev, level: res.data.level }));
+      setEditingProfile(false);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       setError(msg);
@@ -252,89 +306,11 @@ export default function AdventurerProfileManager() {
     }
   };
 
-  const handleSkillChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
-    const { name, value } = e.target;
-    setSkillForm((prev) => ({
-      ...prev,
-      [name]: name === "level" ? Number(value) : value,
-    }));
-  };
-
-  const handleAddSkill = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!token) return;
-
-    setSavingSkill(true);
-    setError(null);
-
-    const payload = {
-      name: skillForm.name,
-      description: skillForm.description || undefined,
-      level: Number(skillForm.level),
-      category: skillForm.category || undefined,
-      cooldown: skillForm.cooldown || undefined,
-    };
-
-    try {
-      const res = await api.post<ApiResponse<AdventurerProfile>>(
-        "/adventurers/me/skills",
-        payload,
-        token
-      );
-      setProfile(res.data);
-      setSkillForm(emptySkillForm);
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      setError(msg);
-    } finally {
-      setSavingSkill(false);
-    }
-  };
-
-  const handleDeleteSkill = async (skillId: string) => {
-    if (!token) return;
-    setError(null);
-
-    try {
-      const res = await deleteRequest<ApiResponse<AdventurerProfile>>(
-        `/adventurers/me/skills/${skillId}`,
-        token
-      );
-      if (res && (res as any).data) {
-        setProfile((res as ApiResponse<AdventurerProfile>).data);
-      } else {
-        const refreshed = await api.get<ApiResponse<AdventurerProfile>>(
-          "/adventurers/me",
-          token
-        );
-        setProfile(refreshed.data);
-      }
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      setError(msg);
-    }
-  };
-
-  const handleLevelUpSkill = async (skill: AdventurerSkill) => {
-    if (!token) return;
-    setError(null);
-
-    try {
-      const res = await patchJson<ApiResponse<AdventurerProfile>>(
-        `/adventurers/me/skills/${skill._id}`,
-        { level: skill.level + 1 },
-        token
-      );
-      setProfile(res.data);
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      setError(msg);
-    }
-  };
 
   if (!user) return null;
+
+  // Only show for adventurers
+  if (user.role !== "ADVENTURER") return null;
 
   return (
     <section className="mt-8 space-y-8">
@@ -342,11 +318,9 @@ export default function AdventurerProfileManager() {
         <h2 className="text-2xl font-bold flex items-center gap-2">
           🧝 Adventurer Profile & Skills
         </h2>
-        {loading && (
-          <span className="text-sm text-slate-300">
-            Consulting the guild records…
-          </span>
-        )}
+        <div className="text-lg font-bold text-amber-400 flex items-center gap-2">
+          💰 {userGold} Gold
+        </div>
       </div>
 
       {error && (
@@ -358,9 +332,17 @@ export default function AdventurerProfileManager() {
       {/* Current profile card – parchment style */}
       {profile && (
         <div className="rounded-2xl border border-amber-700 bg-[#fdf3d0] text-slate-900 shadow-lg shadow-amber-900/30 p-5 space-y-2">
-          <h3 className="text-xl font-bold flex items-center gap-2">
-            📜 Current Profile
-          </h3>
+          <div className="flex items-center justify-between">
+            <h3 className="text-xl font-bold flex items-center gap-2">
+              📜 Current Profile
+            </h3>
+            <button
+              onClick={() => setEditingProfile(!editingProfile)}
+              className="btn bg-amber-700 hover:bg-amber-800 text-white text-sm px-4 py-2"
+            >
+              {editingProfile ? "Cancel Edit" : "✏️ Edit Profile"}
+            </button>
+          </div>
           <p>
             <b>Title:</b> {profile.title}
           </p>
@@ -395,11 +377,12 @@ export default function AdventurerProfileManager() {
         </div>
       )}
 
-      {/* Profile form – parchment card */}
-      <form
-        onSubmit={handleProfileSubmit}
-        className="rounded-2xl border border-amber-700 bg-[#fdf3d0]/95 text-slate-900 shadow-lg shadow-amber-900/30 p-5 space-y-4"
-      >
+      {/* Profile form – parchment card - only show when editing */}
+      {editingProfile && (
+        <form
+          onSubmit={handleProfileSubmit}
+          className="rounded-2xl border border-amber-700 bg-[#fdf3d0]/95 text-slate-900 shadow-lg shadow-amber-900/30 p-5 space-y-4"
+        >
         <h3 className="text-lg font-semibold flex items-center gap-2">
           ✒️ Edit / Create Adventurer Profile
         </h3>
@@ -508,140 +491,50 @@ export default function AdventurerProfileManager() {
             : "Create Profile"}
         </button>
       </form>
+      )}
 
-      {/* Skills section */}
-      <div className="grid md:grid-cols-[2fr,1fr] gap-6">
-        {/* Skills list – dark magical card */}
-        <div className="rounded-2xl border border-purple-500/60 bg-slate-900/80 text-slate-100 shadow-lg shadow-purple-900/40 p-5">
-          <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
-            ✨ Learned Skills
-          </h3>
-          {profile && profile.skills.length === 0 && (
-            <p className="text-sm text-slate-300">
-              No skills yet — record your first technique in the tome on the
-              right.
-            </p>
-          )}
-          {profile && profile.skills.length > 0 && (
-            <ul className="space-y-3">
-              {profile.skills.map((skill) => (
-                <li
-                  key={skill._id}
-                  className="flex items-start justify-between rounded-xl border border-purple-500/40 bg-slate-900/90 px-3 py-2"
-                >
-                  <div>
-                    <div className="font-semibold">
-                      {skill.name}{" "}
-                      <span className="text-xs text-purple-200">
-                        (Lv. {skill.level}
-                        {skill.category ? ` · ${skill.category}` : ""})
-                      </span>
-                    </div>
-                    {skill.description && (
-                      <p className="text-sm text-slate-200">
-                        {skill.description}
-                      </p>
-                    )}
-                    {skill.cooldown && (
-                      <p className="text-xs text-slate-400">
-                        Cooldown: {skill.cooldown}
-                      </p>
-                    )}
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <button
-                      type="button"
-                      className="btn px-3 py-1 text-xs"
-                      onClick={() => void handleLevelUpSkill(skill)}
-                    >
-                      Level up
-                    </button>
-                    <button
-                      type="button"
-                      className="btn px-3 py-1 text-xs bg-red-600 hover:bg-red-700 text-white"
-                      onClick={() => void handleDeleteSkill(skill._id)}
-                    >
-                      Remove
-                    </button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-
-        {/* Add skill – spellbook card */}
-        <form
-          onSubmit={handleAddSkill}
-          className="rounded-2xl border border-purple-500/60 bg-slate-900/80 text-slate-100 shadow-lg shadow-purple-900/40 p-5 space-y-3"
-        >
-          <h3 className="text-lg font-semibold mb-1 flex items-center gap-2">
-            📖 Record New Skill
-          </h3>
-          <div>
-            <label className="text-sm font-semibold">Name</label>
-            <input
-              className="input bg-slate-800"
-              name="name"
-              value={skillForm.name}
-              onChange={handleSkillChange}
-              placeholder="Fireball"
-              required
-            />
-          </div>
-          <div>
-            <label className="text-sm font-semibold">Description</label>
-            <textarea
-              className="input bg-slate-800 min-h-[60px]"
-              name="description"
-              value={skillForm.description}
-              onChange={handleSkillChange}
-              placeholder="Throws a fiery ball of doom."
-            />
-          </div>
-          <div className="grid grid-cols-3 gap-3">
-            <div>
-              <label className="text-sm font-semibold">Level</label>
-              <input
-                className="input bg-slate-800"
-                type="number"
-                min={1}
-                max={10}
-                name="level"
-                value={skillForm.level}
-                onChange={handleSkillChange}
-              />
-            </div>
-            <div>
-              <label className="text-sm font-semibold">Category</label>
-              <input
-                className="input bg-slate-800"
-                name="category"
-                value={skillForm.category}
-                onChange={handleSkillChange}
-                placeholder="Magic, Combat…"
-              />
-            </div>
-            <div>
-              <label className="text-sm font-semibold">Cooldown</label>
-              <input
-                className="input bg-slate-800"
-                name="cooldown"
-                value={skillForm.cooldown}
-                onChange={handleSkillChange}
-                placeholder="Every 2 turns"
-              />
-            </div>
-          </div>
-          <button
-            className="btn w-full bg-purple-600 hover:bg-purple-700 text-white"
-            type="submit"
-            disabled={savingSkill}
-          >
-            {savingSkill ? "Inscribing…" : "Add Skill"}
-          </button>
-        </form>
+      {/* Skills section - read-only display */}
+      <div className="rounded-2xl border border-purple-500/60 bg-slate-900/80 text-slate-100 shadow-lg shadow-purple-900/40 p-5">
+        <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+          ✨ Learned Skills
+        </h3>
+        {profile && profile.skills.length === 0 && (
+          <p className="text-sm text-slate-300">
+            No skills yet. Visit the Skills Shop to purchase your first skill!
+          </p>
+        )}
+        {profile && profile.skills.length > 0 && (
+          <ul className="space-y-3">
+            {profile.skills.map((skill) => (
+              <li
+                key={skill._id}
+                className="rounded-xl border border-purple-500/40 bg-slate-900/90 px-3 py-2"
+              >
+                <div className="font-semibold">
+                  {skill.name}{" "}
+                  <span className="text-xs text-purple-200">
+                    (Lv. {skill.level}
+                    {skill.category ? ` · ${skill.category}` : ""})
+                  </span>
+                </div>
+                {skill.description && (
+                  <p className="text-sm text-slate-200 mt-1">
+                    {skill.description}
+                  </p>
+                )}
+                {skill.cooldown && (
+                  <p className="text-xs text-slate-400 mt-1">
+                    Cooldown: {skill.cooldown}
+                  </p>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
+
+      {/* Skills Shop */}
+      <SkillsShop />
     </section>
   );
 }

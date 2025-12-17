@@ -10,6 +10,7 @@ export interface UserDocument extends Document {
   avatarUrl?: string;
   role: Role;
   password: string;       // <-- merged from JS model
+  gold?: number;          // Gold currency for adventurers
   createdAt: Date;
   updatedAt: Date;
 }
@@ -32,6 +33,11 @@ const UserSchema = new Schema<UserDocument>(
       type: String,
       required: true,
       select: false, // common in auth: exclude by default
+    },
+    gold: {
+      type: Number,
+      default: 0,
+      min: 0,
     },
   },
   { timestamps: true }
