@@ -121,6 +121,7 @@ export default function NPCCompletions() {
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <h3 className="text-xl font-semibold mb-2">{quest.title}</h3>
+                    <p className="text-xs text-slate-500 font-mono mb-2">Quest ID: {quest._id}</p>
                     <p className="text-slate-300 mb-3">{quest.description}</p>
                     <div className="text-sm text-slate-400 space-y-1">
                       <p>

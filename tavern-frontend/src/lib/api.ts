@@ -1,5 +1,15 @@
 const BASE = import.meta.env.VITE_API_URL as string;
 
+const handleError = async (res: Response): Promise<never> => {
+  const text = await res.text();
+  try {
+    const json = JSON.parse(text);
+    throw new Error(json.message || text);
+  } catch {
+    throw new Error(text);
+  }
+};
+
 export const api = {
   async post<T>(path: string, body: unknown, token?: string): Promise<T> {
     const res = await fetch(`${BASE}${path}`, {
@@ -10,7 +20,7 @@ export const api = {
       },
       body: JSON.stringify(body),
     });
-    if (!res.ok) throw new Error(await res.text());
+    if (!res.ok) await handleError(res);
     return res.json();
   },
 
@@ -18,7 +28,7 @@ export const api = {
     const res = await fetch(`${BASE}${path}`, {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     });
-    if (!res.ok) throw new Error(await res.text());
+    if (!res.ok) await handleError(res);
     return res.json();
   },
 
@@ -31,7 +41,7 @@ export const api = {
       },
       body: JSON.stringify(body),
     });
-    if (!res.ok) throw new Error(await res.text());
+    if (!res.ok) await handleError(res);
     return res.json();
   },
 
@@ -40,7 +50,7 @@ export const api = {
       method: "DELETE",
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     });
-    if (!res.ok) throw new Error(await res.text());
+    if (!res.ok) await handleError(res);
     return res.json();
   },
 };

@@ -4,6 +4,7 @@ import { useAuth } from "../context/AuthContext";
 import AdventurerProfileManager from "../components/AdventurerProfileManager";
 import { useWorkload } from "../hooks/useWorkload";
 import QuestChat from "../components/QuestChat";
+import EscrowVault from "../components/EscrowVault";
 import { useState } from "react";
 
 export default function Dashboard() {
@@ -40,6 +41,91 @@ export default function Dashboard() {
             </button>
           </div>
         </header>
+
+        {/* Navigation Menu - Role Based */}
+        <nav className="rounded-2xl border border-violet-500/40 bg-gradient-to-r from-violet-900/30 to-slate-900/70 p-4 md:p-5">
+          <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
+            🗺️ Quest Menu
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {user?.role === "ADVENTURER" && (
+              <>
+                <Link
+                  to="/adventurer/quests"
+                  className="p-4 rounded-lg bg-emerald-900/30 border border-emerald-500/40 hover:bg-emerald-900/50 transition-colors"
+                >
+                  <div className="text-2xl mb-1">📜</div>
+                  <div className="font-semibold text-emerald-200">Quest Board</div>
+                  <div className="text-xs text-slate-400">Browse & apply to quests</div>
+                </Link>
+                <Link
+                  to="/adventurer/applications"
+                  className="p-4 rounded-lg bg-sky-900/30 border border-sky-500/40 hover:bg-sky-900/50 transition-colors"
+                >
+                  <div className="text-2xl mb-1">📋</div>
+                  <div className="font-semibold text-sky-200">My Applications</div>
+                  <div className="text-xs text-slate-400">Track your quests</div>
+                </Link>
+              </>
+            )}
+            {user?.role === "NPC" && (
+              <>
+                <Link
+                  to="/npc/quests"
+                  className="p-4 rounded-lg bg-amber-900/30 border border-amber-500/40 hover:bg-amber-900/50 transition-colors"
+                >
+                  <div className="text-2xl mb-1">✍️</div>
+                  <div className="font-semibold text-amber-200">My Quests</div>
+                  <div className="text-xs text-slate-400">Post & manage quests</div>
+                </Link>
+                <Link
+                  to="/npc/applications"
+                  className="p-4 rounded-lg bg-purple-900/30 border border-purple-500/40 hover:bg-purple-900/50 transition-colors"
+                >
+                  <div className="text-2xl mb-1">👥</div>
+                  <div className="font-semibold text-purple-200">Applications</div>
+                  <div className="text-xs text-slate-400">Review adventurers</div>
+                </Link>
+                <Link
+                  to="/npc/completions"
+                  className="p-4 rounded-lg bg-emerald-900/30 border border-emerald-500/40 hover:bg-emerald-900/50 transition-colors"
+                >
+                  <div className="text-2xl mb-1">✅</div>
+                  <div className="font-semibold text-emerald-200">Completions</div>
+                  <div className="text-xs text-slate-400">Review & pay</div>
+                </Link>
+              </>
+            )}
+            {user?.role === "GUILD_MASTER" && (
+              <>
+                <Link
+                  to="/admin/anomalies"
+                  className="p-4 rounded-lg bg-red-900/30 border border-red-500/40 hover:bg-red-900/50 transition-colors"
+                >
+                  <div className="text-2xl mb-1">⚠️</div>
+                  <div className="font-semibold text-red-200">Anomalies</div>
+                  <div className="text-xs text-slate-400">Monitor issues</div>
+                </Link>
+                <Link
+                  to="/admin/chats"
+                  className="p-4 rounded-lg bg-purple-900/30 border border-purple-500/40 hover:bg-purple-900/50 transition-colors"
+                >
+                  <div className="text-2xl mb-1">💬</div>
+                  <div className="font-semibold text-purple-200">All Chats</div>
+                  <div className="text-xs text-slate-400">Monitor communications</div>
+                </Link>
+                <Link
+                  to="/admin/escrows"
+                  className="p-4 rounded-lg bg-amber-900/30 border border-amber-500/40 hover:bg-amber-900/50 transition-colors"
+                >
+                  <div className="text-2xl mb-1">🏦</div>
+                  <div className="font-semibold text-amber-200">Escrow Vault</div>
+                  <div className="text-xs text-slate-400">View all locked funds</div>
+                </Link>
+              </>
+            )}
+          </div>
+        </nav>
 
         {/* Basic user info (guild record) */}
         <section className="mt-2 rounded-2xl border border-amber-500/40 bg-slate-900/70 shadow-[0_0_25px_rgba(245,158,11,0.2)] p-4 md:p-5 space-y-1">
@@ -93,6 +179,9 @@ export default function Dashboard() {
             <p className="text-sm text-slate-400">Checking your workload…</p>
           )}
         </section>
+
+        {/* NPC Escrow Vault */}
+        {user?.role === "NPC" && <EscrowVault />}
 
         {/* Feature 1: Adventurer profile & skills */}
         <AdventurerProfileManager />

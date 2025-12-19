@@ -6,6 +6,10 @@ import questRoutes from "./quest.routes";
 import workloadRoutes from "./workload.routes";
 import leaderboardRoutes from "./leaderboard.routes";
 import chatRoutes from "./chat.routes";
+import adminRoutes from "./admin.routes";
+import notificationRoutes from "./notification.routes";
+import skillShopRoutes from "./skillShop.routes";
+import escrowRoutes from "./escrow.routes";
 
 
 const router = Router();
@@ -18,11 +22,13 @@ router.use("/auth", authRoutes);
 router.use("/users", userRoutes);
 router.use("/", adventurerProfileRoutes);
 router.use("/", questRoutes);
-router.use("/", adventurerProfileRoutes);
-router.use("/", questRoutes);
 router.use("/", workloadRoutes);
 router.use("/", leaderboardRoutes);
 router.use("/chat", chatRoutes);
+router.use("/admin", adminRoutes);
+router.use("/", notificationRoutes);
+router.use("/", skillShopRoutes);
+router.use("/", escrowRoutes);
 
 
 export default router;

@@ -193,6 +193,15 @@ export default function NPCQuestBoard() {
             <h2 className="text-xl font-semibold">
               {editingQuest ? "✏️ Edit Quest" : "📝 Post New Quest"}
             </h2>
+            
+            {!editingQuest && form.rewardGold > 0 && (
+              <div className="rounded-lg border border-amber-500/60 bg-amber-900/20 px-4 py-3 text-amber-100 text-sm">
+                <strong>🏦 Escrow Notice:</strong> {form.rewardGold} gold will be locked 
+                in escrow when you create this quest. The funds will be released to the 
+                adventurer upon completion, or refunded if the quest is cancelled.
+              </div>
+            )}
+
             <div className="grid md:grid-cols-2 gap-4">
               <div>
                 <label className="text-sm font-semibold">Title</label>
@@ -276,6 +285,7 @@ export default function NPCQuestBoard() {
                         {quest.difficulty}
                       </span>
                     </div>
+                    <p className="text-xs text-slate-500 font-mono mb-2">Quest ID: {quest._id}</p>
                     <p className="text-slate-300 mb-2">{quest.description}</p>
                     <div className="flex items-center gap-4 text-sm text-slate-400">
                       <span>💰 {quest.rewardGold || 0} gold</span>

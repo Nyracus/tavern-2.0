@@ -15,9 +15,10 @@ type ChatMessage = {
 type QuestChatProps = {
   questId: string;
   questTitle: string;
+  onClose?: () => void;
 };
 
-export default function QuestChat({ questId, questTitle }: QuestChatProps) {
+export default function QuestChat({ questId, questTitle, onClose }: QuestChatProps) {
   const { token, user } = useAuth();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState("");
@@ -87,10 +88,19 @@ export default function QuestChat({ questId, questTitle }: QuestChatProps) {
   return (
     <div className="rounded-2xl border border-sky-500/40 bg-slate-900/70 shadow-lg overflow-hidden flex flex-col">
       {/* Header */}
-      <div className="bg-gradient-to-r from-sky-900/50 to-slate-900/50 px-4 py-3 border-b border-sky-500/30">
+      <div className="bg-gradient-to-r from-sky-900/50 to-slate-900/50 px-4 py-3 border-b border-sky-500/30 flex items-center justify-between">
         <h3 className="text-lg font-semibold flex items-center gap-2">
           💬 Quest Chat: {questTitle}
         </h3>
+        {onClose && (
+          <button
+            onClick={onClose}
+            className="text-slate-400 hover:text-slate-200 transition-colors"
+            aria-label="Close chat"
+          >
+            ✕
+          </button>
+        )}
       </div>
 
       {/* Messages area */}

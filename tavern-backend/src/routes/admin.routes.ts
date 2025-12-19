@@ -14,6 +14,8 @@ router.patch(
   ...adminGuard,
   adminController.updateAnomalyStatus.bind(adminController)
 );
+router.get("/chats", ...adminGuard, adminController.getAllChats.bind(adminController));
+router.get("/escrows", ...adminGuard, adminController.getAllEscrows.bind(adminController));
 
 export default router;
 
