@@ -53,7 +53,7 @@ export class EscrowService {
    * Update escrow with adventurer when quest is accepted
    */
   async updateEscrowAdventurer(questId: string, adventurerId: string) {
-    const escrow = await EscrowModel.findOne({ questId });
+    const escrow = await EscrowModel.findOne({ questId: new Types.ObjectId(questId) });
     if (!escrow) {
       throw new Error("Escrow not found for this quest");
     }
@@ -72,7 +72,7 @@ export class EscrowService {
    * Release escrow funds to adventurer (called on quest payment)
    */
   async releaseEscrow(questId: string, actualAmount?: number) {
-    const escrow = await EscrowModel.findOne({ questId });
+    const escrow = await EscrowModel.findOne({ questId: new Types.ObjectId(questId) });
     if (!escrow) {
       throw new Error("Escrow not found for this quest");
     }
@@ -118,7 +118,7 @@ export class EscrowService {
    * Refund escrow to NPC (called on quest cancellation)
    */
   async refundEscrow(questId: string, reason?: string) {
-    const escrow = await EscrowModel.findOne({ questId });
+    const escrow = await EscrowModel.findOne({ questId: new Types.ObjectId(questId) });
     if (!escrow) {
       throw new Error("Escrow not found for this quest");
     }
@@ -151,7 +151,7 @@ export class EscrowService {
    * Get escrow by quest ID
    */
   async getEscrowByQuest(questId: string) {
-    return await EscrowModel.findOne({ questId })
+    return await EscrowModel.findOne({ questId: new Types.ObjectId(questId) })
       .populate("npcId", "username displayName")
       .populate("adventurerId", "username displayName");
   }

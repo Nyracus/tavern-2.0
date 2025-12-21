@@ -325,7 +325,7 @@ export default function NPCQuestBoard() {
                     {quest.status === "Completed" && (
                       <Link
                         to="/npc/completions"
-                        className="btn bg-emerald-600 hover:bg-emerald-700 text-sm px-3 py-1"
+                        className="btn bg-emerald-600 hover:bg-emerald-700 text-sm px-3 py-1 no-underline"
                       >
                         Review & Pay
                       </Link>

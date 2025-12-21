@@ -157,7 +157,7 @@ export default function NPCApplications() {
                     </div>
                   </div>
                 </div>
-                {selectedQuest?._id === quest._id && selectedQuest.applications.find((a) => a._id === application._id) ? (
+                {selectedQuest?._id === quest._id && selectedQuest.applications.some((a) => a._id === application._id) ? (
                   <div className="border-t border-slate-700 pt-3 space-y-3">
                     <div>
                       <label className="text-sm font-semibold">Set Deadline (required for acceptance)</label>

@@ -12,7 +12,7 @@ type Quest = {
   status: string;
   rewardGold?: number;
   deadline?: string;
-  adventurerId?: string;
+  adventurerId?: string | { _id: string; username: string; displayName: string };
   adventurerName?: string;
   completionReportUrl?: string;
   completionSubmittedAt?: string;
@@ -125,7 +125,11 @@ export default function NPCCompletions() {
                     <p className="text-slate-300 mb-3">{quest.description}</p>
                     <div className="text-sm text-slate-400 space-y-1">
                       <p>
-                        <b>Adventurer:</b> {quest.adventurerName || quest.adventurerId}
+                        <b>Adventurer:</b>{" "}
+                        {quest.adventurerName || 
+                          (typeof quest.adventurerId === "object" 
+                            ? quest.adventurerId.displayName || quest.adventurerId.username
+                            : quest.adventurerId)}
                       </p>
                       <p>
                         <b>Submitted:</b>{" "}
