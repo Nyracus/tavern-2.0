@@ -16,6 +16,9 @@ import NPCCompletions from "./pages/NPCCompletions";
 import AdventurerQuestBoard from "./pages/AdventurerQuestBoard";
 import AdventurerApplications from "./pages/AdventurerApplications";
 import GuildmasterChats from "./pages/GuildmasterChats";
+import AdminConflicts from "./pages/AdminConflicts";
+import AdminTransactions from "./pages/AdminTransactions";
+import SkillsShopPage from "./pages/SkillsShopPage";
 
 
 const router = createBrowserRouter([
@@ -93,6 +96,30 @@ const router = createBrowserRouter([
     element: (
       <Protected roles={["GUILD_MASTER"]}>
         <GuildmasterChats />
+      </Protected>
+    ),
+  },
+  {
+    path: "/admin/conflicts",
+    element: (
+      <Protected roles={["GUILD_MASTER"]}>
+        <AdminConflicts />
+      </Protected>
+    ),
+  },
+  {
+    path: "/admin/transactions",
+    element: (
+      <Protected roles={["GUILD_MASTER"]}>
+        <AdminTransactions />
+      </Protected>
+    ),
+  },
+  {
+    path: "/skills/shop",
+    element: (
+      <Protected roles={["ADVENTURER"]}>
+        <SkillsShopPage />
       </Protected>
     ),
   },

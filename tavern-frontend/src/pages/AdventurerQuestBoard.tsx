@@ -35,6 +35,7 @@ type AdventurerProfile = {
   level: number;
   xp?: number;
   rank?: string;
+  class?: string;
 };
 
 export default function AdventurerQuestBoard() {
@@ -53,6 +54,7 @@ export default function AdventurerQuestBoard() {
   // Search and filter state
   const [searchQuery, setSearchQuery] = useState("");
   const [difficultyFilter, setDifficultyFilter] = useState<string[]>([]);
+  const [classFilter, setClassFilter] = useState<string>("");
   const [minReward, setMinReward] = useState("");
   const [maxReward, setMaxReward] = useState("");
   const [sortBy, setSortBy] = useState<"createdAt" | "rewardGold" | "difficulty">("createdAt");
@@ -104,7 +106,7 @@ export default function AdventurerQuestBoard() {
       );
       
       // Load recommended quests (with ranking) - only if no search/filters
-      if (!searchQuery && difficultyFilter.length === 0 && !minReward && !maxReward) {
+      if (!searchQuery && difficultyFilter.length === 0 && !classFilter && !minReward && !maxReward) {
         const recommendedRes = await api.get<{ success: boolean; data: Quest[] }>(
           "/quests/recommended",
           token
@@ -114,7 +116,29 @@ export default function AdventurerQuestBoard() {
         setRecommendedQuests([]);
       }
 
-      setQuests(res.data);
+      // Apply class filter if selected
+      let filteredQuests = res.data;
+      if (classFilter) {
+        const classKeywords: Record<string, string[]> = {
+          "archer": ["archer", "ranger", "ranged", "bow", "arrow", "scout", "hunt", "track"],
+          "mage": ["mage", "wizard", "sorcerer", "magic", "arcane", "spell", "enchant", "alchemy"],
+          "fighter": ["fighter", "warrior", "combat", "melee", "sword", "shield", "guard", "warfare"],
+          "rogue": ["rogue", "thief", "stealth", "assassin", "lockpick", "trap", "pickpocket"],
+          "cleric": ["cleric", "paladin", "holy", "heal", "divine", "protection", "bless"],
+          "bard": ["bard", "performance", "music", "diplomacy", "entertain", "sing"],
+          "druid": ["druid", "nature", "animal", "wild", "forest", "plant", "elemental"],
+          "monk": ["monk", "martial", "meditation", "discipline", "fist", "speed"],
+          "barbarian": ["barbarian", "rage", "strength", "berserk", "fury", "endurance"],
+        };
+        
+        const keywords = classKeywords[classFilter] || [];
+        filteredQuests = res.data.filter(quest => {
+          const questText = `${quest.title} ${quest.description}`.toLowerCase();
+          return keywords.some(keyword => questText.includes(keyword));
+        });
+      }
+
+      setQuests(filteredQuests);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to load quests");
     } finally {
@@ -129,7 +153,7 @@ export default function AdventurerQuestBoard() {
       }, searchQuery ? 500 : 0); // Debounce search
       return () => clearTimeout(timeoutId);
     }
-  }, [searchQuery, difficultyFilter, minReward, maxReward, sortBy, sortOrder]);
+  }, [searchQuery, difficultyFilter, classFilter, minReward, maxReward, sortBy, sortOrder]);
 
   const handleApply = async (questId: string) => {
     if (!token) return;
@@ -246,7 +270,26 @@ export default function AdventurerQuestBoard() {
           </div>
 
           {showFilters && (
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-3 pt-3 border-t border-slate-700">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-3 pt-3 border-t border-slate-700">
+              <div>
+                <label className="text-sm font-semibold mb-1 block">Class Match</label>
+                <select
+                  className="input bg-slate-800"
+                  value={classFilter}
+                  onChange={(e) => setClassFilter(e.target.value)}
+                >
+                  <option value="">All Classes</option>
+                  <option value="archer">🏹 Archer/Ranger</option>
+                  <option value="mage">🔮 Mage/Wizard/Sorcerer</option>
+                  <option value="fighter">⚔️ Fighter/Warrior</option>
+                  <option value="rogue">🗡️ Rogue/Thief</option>
+                  <option value="cleric">✨ Cleric/Paladin</option>
+                  <option value="bard">🎵 Bard</option>
+                  <option value="druid">🌿 Druid</option>
+                  <option value="monk">🥋 Monk</option>
+                  <option value="barbarian">💪 Barbarian</option>
+                </select>
+              </div>
               <div>
                 <label className="text-sm font-semibold mb-1 block">Difficulty</label>
                 <div className="flex flex-wrap gap-2">
@@ -322,6 +365,7 @@ export default function AdventurerQuestBoard() {
               setFilter("recommended");
               setSearchQuery("");
               setDifficultyFilter([]);
+              setClassFilter("");
               setMinReward("");
               setMaxReward("");
             }}

@@ -87,6 +87,7 @@ export class AuthService {
       displayName: u.displayName,
       avatarUrl: u.avatarUrl,
       role: u.role,
+      gold: u.gold || 0, // Include gold in public user data
       createdAt: u.createdAt,
       updatedAt: u.updatedAt,
     };

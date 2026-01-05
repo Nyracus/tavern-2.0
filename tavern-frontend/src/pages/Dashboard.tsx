@@ -5,6 +5,7 @@ import AdventurerProfileManager from "../components/AdventurerProfileManager";
 import { useWorkload } from "../hooks/useWorkload";
 import { NotificationDropdown } from "../components/NotificationDropdown";
 import QuestQuickView from "../components/QuestQuickView";
+import AdventurerStats from "../components/AdventurerStats";
 
 export default function Dashboard() {
   const { user, logout } = useAuth();
@@ -47,6 +48,18 @@ export default function Dashboard() {
                   className="text-xs md:text-sm px-3 py-2 rounded-lg border border-purple-500/60 text-purple-300 hover:bg-purple-500/10"
                 >
                   💬 All Chats
+                </Link>
+                <Link
+                  to="/admin/conflicts"
+                  className="text-xs md:text-sm px-3 py-2 rounded-lg border border-orange-500/60 text-orange-300 hover:bg-orange-500/10"
+                >
+                  ⚖️ Conflicts
+                </Link>
+                <Link
+                  to="/admin/transactions"
+                  className="text-xs md:text-sm px-3 py-2 rounded-lg border border-amber-500/60 text-amber-300 hover:bg-amber-500/10"
+                >
+                  📜 Ledger
                 </Link>
               </>
             )}
@@ -147,6 +160,9 @@ export default function Dashboard() {
         {/* Adventurer-specific view */}
         {isAdventurer && (
           <>
+            {/* Adventurer Stats: Gold, Rank, XP */}
+            <AdventurerStats />
+            
             {/* Workload / burnout status */}
             <section className="rounded-2xl border border-sky-500/40 bg-slate-900/70 p-4 md:p-5 space-y-2">
               <h2 className="text-lg font-semibold flex items-center gap-2">
@@ -229,6 +245,25 @@ export default function Dashboard() {
                   </div>
                 </Link>
               </div>
+            </section>
+
+            {/* Skills Shop Button */}
+            <section className="rounded-2xl border border-purple-500/40 bg-slate-900/70 p-4 md:p-5 space-y-3">
+              <h2 className="text-lg font-semibold flex items-center gap-2">
+                💎 Skills Shop
+              </h2>
+              <p className="text-sm text-slate-300">
+                Purchase new skills and abilities to enhance your adventuring capabilities.
+              </p>
+              <Link
+                to="/skills/shop"
+                className="block rounded-xl border border-purple-500/40 bg-slate-950/70 px-4 py-3 text-sm hover:bg-purple-500/10 transition-colors"
+              >
+                <div className="font-semibold text-purple-300">💎 Visit Skills Shop →</div>
+                <div className="text-xs text-slate-300 mt-1">
+                  Browse and purchase skills with your earned gold.
+                </div>
+              </Link>
             </section>
 
             {/* Feature 1: Adventurer profile & skills */}

@@ -12,7 +12,7 @@ type Quest = {
   status: string;
   rewardGold?: number;
   deadline?: string;
-  adventurerId?: string;
+  adventurerId?: string | { _id: string; username: string; displayName: string };
   adventurerName?: string;
   completionReportUrl?: string;
   completionSubmittedAt?: string;
@@ -28,12 +28,22 @@ export default function NPCCompletions() {
   const [paymentAmount, setPaymentAmount] = useState<Record<string, number>>({});
 
   useEffect(() => {
-    if (token) loadQuests();
+    if (!token) return;
+    
+    // Initial load
+    loadQuests();
+    
+    // Poll for new completions every 10 seconds
+    const interval = setInterval(() => {
+      loadQuests(true); // Silent polling
+    }, 10000);
+    
+    return () => clearInterval(interval);
   }, [token]);
 
-  const loadQuests = async () => {
+  const loadQuests = async (silent = false) => {
     if (!token) return;
-    setLoading(true);
+    if (!silent) setLoading(true);
     setError(null);
     try {
       const res = await api.get<{ success: boolean; data: Quest[] }>(
@@ -50,9 +60,12 @@ export default function NPCCompletions() {
       });
       setPaymentAmount(amounts);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to load completions");
+      // Don't show error on polling failures, only on initial load
+      if (!silent) {
+        setError(err instanceof Error ? err.message : "Failed to load completions");
+      }
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
@@ -74,6 +87,25 @@ export default function NPCCompletions() {
       await loadQuests();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to process payment");
+    }
+  };
+
+  const handleReject = async (questId: string, reason?: string) => {
+    if (!token) return;
+    if (!confirm("Are you sure you want to reject this completion? The adventurer can resubmit or raise a conflict.")) {
+      return;
+    }
+
+    setError(null);
+    try {
+      await api.post<{ success: boolean; data: Quest; message?: string }>(
+        `/quests/${questId}/reject-completion`,
+        { reason: reason || undefined },
+        token
+      );
+      await loadQuests();
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to reject completion");
     }
   };
 
@@ -124,7 +156,11 @@ export default function NPCCompletions() {
                     <p className="text-slate-300 mb-3">{quest.description}</p>
                     <div className="text-sm text-slate-400 space-y-1">
                       <p>
-                        <b>Adventurer:</b> {quest.adventurerName || quest.adventurerId}
+                        <b>Adventurer:</b>{" "}
+                        {quest.adventurerName ||
+                          (typeof quest.adventurerId === "object"
+                            ? quest.adventurerId.displayName || quest.adventurerId.username
+                            : quest.adventurerId || "Unknown")}
                       </p>
                       <p>
                         <b>Submitted:</b>{" "}
@@ -161,7 +197,7 @@ export default function NPCCompletions() {
                   </div>
                 </div>
                 <div className="border-t border-slate-700 pt-3">
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 flex-wrap">
                     <label className="text-sm font-semibold">Payment Amount:</label>
                     <input
                       className="input bg-slate-800 w-32"
@@ -176,12 +212,20 @@ export default function NPCCompletions() {
                       }
                     />
                     <span className="text-sm text-slate-400">gold</span>
-                    <button
-                      onClick={() => handlePay(quest._id)}
-                      className="btn bg-emerald-600 hover:bg-emerald-700 text-sm px-4 py-2 ml-auto"
-                    >
-                      💰 Approve & Pay
-                    </button>
+                    <div className="flex items-center gap-2 ml-auto">
+                      <button
+                        onClick={() => handleReject(quest._id)}
+                        className="btn bg-red-600 hover:bg-red-700 text-sm px-4 py-2"
+                      >
+                        ✗ Reject
+                      </button>
+                      <button
+                        onClick={() => handlePay(quest._id)}
+                        className="btn bg-emerald-600 hover:bg-emerald-700 text-sm px-4 py-2"
+                      >
+                        💰 Approve & Pay
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>

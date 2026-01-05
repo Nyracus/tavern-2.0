@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { api } from "../lib/api";
-import SkillsShop from "./SkillsShop";
+import XPMeter from "./XPMeter";
 
 type AdventurerSkill = {
   _id: string;
@@ -32,6 +32,8 @@ type AdventurerProfile = {
   background?: string;
   attributes: Attributes;
   skills: AdventurerSkill[];
+  xp?: number;
+  rank?: string;
 };
 
 type ApiResponse<T> = {
@@ -269,15 +271,20 @@ export default function AdventurerProfileManager() {
     setError(null);
 
     // NOTE: we still send level, but player cannot change it in the UI.
-    const payload = {
+    // Class can only be set on creation, not on update
+    const payload: any = {
       title: form.title,
       summary: form.summary,
-      class: form.charClass,
       level: form.level, // stays 1 unless backend/admin updates it
       race: form.race || undefined,
       background: form.background || undefined,
       attributes: form.attributes,
     };
+    
+    // Only include class if creating a new profile (not updating)
+    if (!profile) {
+      payload.class = form.charClass;
+    }
 
     try {
       let res: ApiResponse<AdventurerProfile>;
@@ -377,6 +384,11 @@ export default function AdventurerProfileManager() {
         </div>
       )}
 
+      {/* XP Meter - Show rank progression */}
+      {profile && (profile.xp !== undefined || profile.rank) && (
+        <XPMeter xp={profile.xp || 0} rank={profile.rank || 'F'} />
+      )}
+
       {/* Profile form – parchment card - only show when editing */}
       {editingProfile && (
         <form
@@ -386,6 +398,15 @@ export default function AdventurerProfileManager() {
         <h3 className="text-lg font-semibold flex items-center gap-2">
           ✒️ Edit / Create Adventurer Profile
         </h3>
+        
+        {profile && profile.class && (
+          <div className="rounded-lg border border-amber-600 bg-amber-50 p-3 text-sm text-amber-800">
+            <p>
+              ⚠️ <strong>Class is Fixed:</strong> Your class "{profile.class}" cannot be changed after creation. 
+              To change your class, submit an anomaly application to the Guild Master.
+            </p>
+          </div>
+        )}
 
         <div className="grid md:grid-cols-2 gap-4">
           <div>
@@ -401,14 +422,37 @@ export default function AdventurerProfileManager() {
           </div>
           <div>
             <label className="text-sm font-semibold">Class</label>
-            <input
-              className="input bg-amber-50"
-              name="charClass"
-              placeholder="Warrior"
-              value={form.charClass}
-              onChange={handleProfileChange}
-              required
-            />
+            {profile && profile.class ? (
+              <div className="input bg-amber-100/80 flex items-center h-[42px] text-sm">
+                <span className="font-medium mr-1">{profile.class}</span>
+                <span className="text-xs text-slate-600 ml-2">
+                  (Fixed - submit anomaly application to Guild Master to change)
+                </span>
+              </div>
+            ) : (
+              <select
+                className="input bg-amber-50"
+                name="charClass"
+                value={form.charClass}
+                onChange={handleProfileChange}
+                required
+              >
+                <option value="">Select Class</option>
+                <option value="Fighter">⚔️ Fighter</option>
+                <option value="Mage">🔮 Mage</option>
+                <option value="Archer">🏹 Archer</option>
+                <option value="Rogue">🗡️ Rogue</option>
+                <option value="Cleric">✨ Cleric</option>
+                <option value="Paladin">🛡️ Paladin</option>
+                <option value="Ranger">🌿 Ranger</option>
+                <option value="Wizard">📜 Wizard</option>
+                <option value="Sorcerer">⚡ Sorcerer</option>
+                <option value="Bard">🎵 Bard</option>
+                <option value="Druid">🌲 Druid</option>
+                <option value="Monk">🥋 Monk</option>
+                <option value="Barbarian">💪 Barbarian</option>
+              </select>
+            )}
           </div>
 
           {/* 🔒 Level is read-only: player sees it, but cannot edit */}
@@ -532,9 +576,6 @@ export default function AdventurerProfileManager() {
           </ul>
         )}
       </div>
-
-      {/* Skills Shop */}
-      <SkillsShop />
     </section>
   );
 }

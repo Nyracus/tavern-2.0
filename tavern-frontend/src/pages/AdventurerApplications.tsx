@@ -24,6 +24,9 @@ type Quest = {
   }>;
   completionReportUrl?: string;
   completionSubmittedAt?: string;
+  hasConflict?: boolean;
+  originalDescription?: string;
+  originalDeadline?: string;
 };
 
 export default function AdventurerApplications() {
@@ -36,14 +39,29 @@ export default function AdventurerApplications() {
   const [uploading, setUploading] = useState(false);
   const [showSubmitForm, setShowSubmitForm] = useState(false);
   const [chatQuest, setChatQuest] = useState<Quest | null>(null);
+  const [showConflictForm, setShowConflictForm] = useState(false);
+  const [conflictQuest, setConflictQuest] = useState<Quest | null>(null);
+  const [conflictType, setConflictType] = useState<"REPORT_REJECTED" | "QUEST_CHANGED">("REPORT_REJECTED");
+  const [conflictDescription, setConflictDescription] = useState("");
+  const [raisingConflict, setRaisingConflict] = useState(false);
 
   useEffect(() => {
-    if (token) loadQuests();
+    if (!token) return;
+    
+    // Initial load
+    loadQuests();
+    
+    // Poll for application status updates every 10 seconds
+    const interval = setInterval(() => {
+      loadQuests(true); // Silent polling
+    }, 10000);
+    
+    return () => clearInterval(interval);
   }, [token]);
 
-  const loadQuests = async () => {
+  const loadQuests = async (silent = false) => {
     if (!token) return;
-    setLoading(true);
+    if (!silent) setLoading(true);
     setError(null);
     try {
       const res = await api.get<{ success: boolean; data: Quest[] }>(
@@ -52,14 +70,23 @@ export default function AdventurerApplications() {
       );
       setQuests(res.data);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to load applications");
+      // Don't show error on polling failures, only on initial load
+      if (!silent) {
+        setError(err instanceof Error ? err.message : "Failed to load applications");
+      }
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
   const handleSubmitCompletion = async (questId: string) => {
     if (!token) return;
+
+    // Check if deadline has passed before submitting
+    if (selectedQuest?.deadline && new Date() > new Date(selectedQuest.deadline)) {
+      setError("Cannot submit completion after deadline has passed.");
+      return;
+    }
 
     setError(null);
     setUploading(true);
@@ -119,6 +146,48 @@ export default function AdventurerApplications() {
   const getMyApplication = (quest: Quest) => {
     if (!user) return null;
     return quest.applications.find((app) => app.adventurerId === user.id);
+  };
+
+  const handleRaiseConflict = async () => {
+    if (!token || !conflictQuest || !conflictDescription.trim()) {
+      setError("Please provide a description for the conflict");
+      return;
+    }
+
+    setRaisingConflict(true);
+    setError(null);
+    try {
+      await api.post(
+        `/quests/${conflictQuest._id}/conflicts/raise`,
+        {
+          type: conflictType,
+          description: conflictDescription.trim(),
+        },
+        token
+      );
+      setShowConflictForm(false);
+      setConflictQuest(null);
+      setConflictDescription("");
+      await loadQuests();
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to raise conflict");
+    } finally {
+      setRaisingConflict(false);
+    }
+  };
+
+  const canRaiseReportRejectedConflict = (quest: Quest) => {
+    // Can raise if completion was submitted but status is back to Accepted (rejected)
+    return quest.status === "Accepted" && quest.completionSubmittedAt !== undefined;
+  };
+
+  const canRaiseQuestChangedConflict = (quest: Quest) => {
+    // Can raise if quest details changed (description or deadline different from original)
+    if (quest.status !== "Accepted") return false;
+    if (!quest.originalDescription && !quest.originalDeadline) return false; // No original details stored
+    if (quest.description !== quest.originalDescription) return true;
+    if (quest.deadline && quest.originalDeadline && quest.deadline !== quest.originalDeadline) return true;
+    return false;
   };
 
   if (!user || user.role !== "ADVENTURER") {
@@ -199,7 +268,7 @@ export default function AdventurerApplications() {
                           <p>
                             <b>Deadline:</b> {new Date(quest.deadline).toLocaleString()}
                             {quest.status === "Accepted" && new Date() > new Date(quest.deadline) && (
-                              <span className="text-red-400 ml-2">⚠️ Deadline passed</span>
+                              <span className="text-red-400 ml-2">⚠️ Deadline passed - Cannot submit completion</span>
                             )}
                           </p>
                         )}
@@ -224,23 +293,55 @@ export default function AdventurerApplications() {
                   </div>
                   <div className="flex items-center gap-2">
                     {quest.status === "Accepted" && !quest.completionReportUrl && (
-                      <button
-                        onClick={() => {
-                          setSelectedQuest(quest);
-                          setShowSubmitForm(true);
-                        }}
-                        className="btn bg-emerald-600 hover:bg-emerald-700 text-sm px-4 py-2"
-                      >
-                        ✅ Submit Completion
-                      </button>
+                      <>
+                        {quest.deadline && new Date() > new Date(quest.deadline) ? (
+                          <span className="text-sm text-red-400 px-4 py-2 border border-red-500/40 rounded-lg">
+                            ⛔ Deadline Passed - Submission Blocked
+                          </span>
+                        ) : (
+                          <button
+                            onClick={() => {
+                              // Double-check deadline before opening form
+                              if (quest.deadline && new Date() > new Date(quest.deadline)) {
+                                setError("Cannot submit completion after deadline has passed.");
+                                return;
+                              }
+                              setSelectedQuest(quest);
+                              setShowSubmitForm(true);
+                            }}
+                            className="btn bg-emerald-600 hover:bg-emerald-700 text-sm px-4 py-2"
+                          >
+                            ✅ Submit Completion
+                          </button>
+                        )}
+                      </>
                     )}
                     {quest.status === "Accepted" && (
-                      <button
-                        onClick={() => setChatQuest(quest)}
-                        className="btn bg-indigo-600 hover:bg-indigo-700 text-sm px-4 py-2"
-                      >
-                        💬 Chat
-                      </button>
+                      <>
+                        <button
+                          onClick={() => setChatQuest(quest)}
+                          className="btn bg-indigo-600 hover:bg-indigo-700 text-sm px-4 py-2"
+                        >
+                          💬 Chat
+                        </button>
+                        {!quest.hasConflict && (canRaiseReportRejectedConflict(quest) || canRaiseQuestChangedConflict(quest)) && (
+                          <button
+                            onClick={() => {
+                              setConflictQuest(quest);
+                              setConflictType(canRaiseReportRejectedConflict(quest) ? "REPORT_REJECTED" : "QUEST_CHANGED");
+                              setShowConflictForm(true);
+                            }}
+                            className="btn bg-orange-600 hover:bg-orange-700 text-sm px-4 py-2"
+                          >
+                            ⚖️ Raise Conflict
+                          </button>
+                        )}
+                        {quest.hasConflict && (
+                          <span className="text-sm text-orange-400 px-4 py-2 border border-orange-500/40 rounded-lg">
+                            ⚖️ Conflict Raised
+                          </span>
+                        )}
+                      </>
                     )}
                     {quest.status === "Completed" && (
                       <span className="text-sm text-emerald-400 px-4 py-2 border border-emerald-500/40 rounded-lg">
@@ -321,6 +422,51 @@ export default function AdventurerApplications() {
             questTitle={chatQuest.title}
             onClose={() => setChatQuest(null)}
           />
+        )}
+
+        {/* Raise Conflict Form */}
+        {showConflictForm && conflictQuest && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-slate-900 rounded-2xl border border-orange-500/40 w-full max-w-md p-6 space-y-4">
+              <h3 className="text-xl font-semibold">
+                Raise Conflict: {conflictType === "REPORT_REJECTED" ? "Report Rejected" : "Quest Changed"}
+              </h3>
+              <p className="text-sm text-slate-300">
+                {conflictType === "REPORT_REJECTED"
+                  ? "Your completion report was rejected. Raising a conflict requires escrowing 50% of the quest reward."
+                  : "The quest details were changed after acceptance. Raising a conflict requires escrowing 50% of the quest reward."}
+              </p>
+              <div>
+                <label className="text-sm font-semibold mb-2 block">Conflict Description *</label>
+                <textarea
+                  className="input bg-slate-800 mt-1 min-h-[100px]"
+                  placeholder="Explain the issue and why you're raising this conflict..."
+                  value={conflictDescription}
+                  onChange={(e) => setConflictDescription(e.target.value)}
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleRaiseConflict}
+                  className="btn bg-orange-600 hover:bg-orange-700 flex-1"
+                  disabled={raisingConflict || !conflictDescription.trim()}
+                >
+                  {raisingConflict ? "Raising Conflict..." : `Raise Conflict (50% Escrow)`}
+                </button>
+                <button
+                  onClick={() => {
+                    setShowConflictForm(false);
+                    setConflictQuest(null);
+                    setConflictDescription("");
+                  }}
+                  className="btn bg-slate-600 hover:bg-slate-700"
+                  disabled={raisingConflict}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </div>

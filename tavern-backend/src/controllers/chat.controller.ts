@@ -26,10 +26,10 @@ export class ChatController {
         });
       }
 
-      // Check access: NPC, assigned adventurer, or guildmaster
+      // Check access: NPC, assigned adventurer, or guildmaster (only if conflict exists)
       const isNPC = quest.npcId.toString() === req.userId;
       const isAdventurer = quest.adventurerId?.toString() === req.userId;
-      const isGuildmaster = req.userRole === "GUILD_MASTER";
+      const isGuildmaster = req.userRole === "GUILD_MASTER" && quest.hasConflict === true; // GM only if conflict exists
 
       if (!isNPC && !isAdventurer && !isGuildmaster) {
         return res.status(403).json({
@@ -77,10 +77,10 @@ export class ChatController {
         });
       }
 
-      // Check access: NPC, assigned adventurer, or guildmaster
+      // Check access: NPC, assigned adventurer, or guildmaster (only if conflict exists)
       const isNPC = quest.npcId.toString() === req.userId;
       const isAdventurer = quest.adventurerId?.toString() === req.userId;
-      const isGuildmaster = req.userRole === "GUILD_MASTER";
+      const isGuildmaster = req.userRole === "GUILD_MASTER" && quest.hasConflict === true; // GM only if conflict exists
 
       if (!isNPC && !isAdventurer && !isGuildmaster) {
         return res.status(403).json({
