@@ -33,15 +33,6 @@ export interface QuestDocument extends Document {
   completionSubmittedAt?: Date;
   paidGold?: number;
   paidAt?: Date;
-  // Escrow fields
-  escrowedGold?: number; // Amount currently in escrow
-  escrowDepositedAt?: Date; // When gold was deposited to escrow
-  // Conflict fields
-  conflictId?: Types.ObjectId; // Reference to conflict if one exists
-  hasConflict?: boolean; // Quick flag to check if conflict exists
-  // Track original quest details for conflict detection
-  originalDescription?: string; // Store original description to detect changes
-  originalDeadline?: Date; // Store original deadline to detect changes
   createdAt: Date;
   updatedAt: Date;
 }
@@ -84,15 +75,6 @@ const QuestSchema = new Schema<QuestDocument>(
     completionSubmittedAt: { type: Date },
     paidGold: { type: Number },
     paidAt: { type: Date },
-    // Escrow fields
-    escrowedGold: { type: Number, min: 0 },
-    escrowDepositedAt: { type: Date },
-    // Conflict fields
-    conflictId: { type: Schema.Types.ObjectId, ref: "Conflict" },
-    hasConflict: { type: Boolean, default: false },
-    // Original quest details for change detection
-    originalDescription: { type: String },
-    originalDeadline: { type: Date },
   },
   { timestamps: true }
 );

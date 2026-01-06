@@ -11,8 +11,6 @@ export interface UserDocument extends Document {
   role: Role;
   password: string;       // <-- merged from JS model
   gold?: number;          // Gold currency for adventurers
-  // NPC-specific fields
-  npcPriority?: number;   // Job posting priority (lower = higher priority, used for demotion)
   createdAt: Date;
   updatedAt: Date;
 }
@@ -37,13 +35,6 @@ const UserSchema = new Schema<UserDocument>(
       select: false, // common in auth: exclude by default
     },
     gold: {
-      type: Number,
-      default: 0,
-      min: 0,
-    },
-    // NPC-specific: job posting priority (lower = higher priority)
-    // Default: 0 (highest priority), can be increased for demotion
-    npcPriority: {
       type: Number,
       default: 0,
       min: 0,

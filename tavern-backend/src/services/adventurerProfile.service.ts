@@ -49,29 +49,16 @@ class AdventurerProfileService {
     userId: string,
     data: UpdateAdventurerProfileInput
   ): Promise<IAdventurerProfile> {
-    const profile = await AdventurerProfileModel.findOne({ userId }).exec();
-    
+    const profile = await AdventurerProfileModel.findOneAndUpdate(
+      { userId },
+      { $set: data },
+      { new: true }
+    ).exec();
+
     if (!profile) {
       throw new AppError(404, 'Adventurer profile not found');
     }
 
-    // Prevent class changes after profile creation (class is fixed)
-    // Users must submit anomaly application to Guild Master to change class
-    if (data.class !== undefined && data.class !== profile.class) {
-      throw new AppError(400, 'Class cannot be changed after profile creation. Submit an anomaly application to the Guild Master to request a class change.');
-    }
-
-    // Update all other fields
-    if (data.title !== undefined) profile.title = data.title;
-    if (data.summary !== undefined) profile.summary = data.summary;
-    if (data.level !== undefined) profile.level = data.level;
-    if (data.race !== undefined) profile.race = data.race;
-    if (data.background !== undefined) profile.background = data.background;
-    if (data.attributes !== undefined) {
-      Object.assign(profile.attributes, data.attributes);
-    }
-
-    await profile.save();
     return profile;
   }
 

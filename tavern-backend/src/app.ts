@@ -13,7 +13,7 @@ app.use(cors());
 app.use(express.json());
 app.use(morgan("dev"));
 
-// Rate limit all API routes (polling endpoints are skipped in the limiter)
+// Rate limit all API routes
 app.use("/api", apiRateLimiter);
 
 // Mount all routes under /api

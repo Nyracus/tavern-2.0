@@ -16,8 +16,6 @@ export interface IAdventurerProfile extends Document {
   summary: string;
   class: string;  // e.g. "Mage", "Warrior"
   level: number;  // adventurer level
-  xp?: number;    // Experience points
-  rank?: string;  // Rank: F, E, D, C, B, A, S, SS, SSS
 
   race?: string;
   background?: string;
@@ -55,12 +53,6 @@ const AdventurerProfileSchema = new Schema<IAdventurerProfile>(
     summary: { type: String, required: true },
     class: { type: String, required: true },
     level: { type: Number, required: true, min: 1 },
-    xp: { type: Number, default: 0, min: 0 },
-    rank: {
-      type: String,
-      enum: ["F", "E", "D", "C", "B", "A", "S", "SS", "SSS"],
-      default: "F",
-    },
 
     race: { type: String },
     background: { type: String },

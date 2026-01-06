@@ -13,7 +13,6 @@ type Quest = {
   npcName?: string;
   recommendationScore?: number;
   recommendationRank?: string;
-  recommendedForClass?: boolean;
 };
 
 export default function QuestQuickView() {
@@ -91,11 +90,6 @@ export default function QuestQuickView() {
                 {quest.recommendationRank && (
                   <span className="text-xs text-purple-400">
                     ⭐ {quest.recommendationRank}
-                  </span>
-                )}
-                {quest.recommendedForClass && (
-                  <span className="text-xs text-emerald-400" title="Recommended for your class">
-                    🎯 Class Match
                   </span>
                 )}
               </div>

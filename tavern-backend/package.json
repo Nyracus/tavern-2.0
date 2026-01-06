@@ -8,17 +8,13 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate",
-    "seed:skills": "ts-node src/scripts/seedSkills.ts",
-    "add-gold": "ts-node src/scripts/addGold.ts",
-    "list-users": "ts-node src/scripts/addGold.ts list"
+    "db:migrate": "drizzle-kit migrate"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.48.0",
     "@types/bcrypt": "^6.0.0",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/multer": "^2.0.0",
-    "@types/nodemailer": "^7.0.4",
     "bcrypt": "^6.0.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
@@ -28,7 +24,6 @@
     "mongoose": "^8.19.3",
     "morgan": "^1.10.0",
     "multer": "^2.0.2",
-    "nodemailer": "^7.0.12",
     "zod": "^3.23.8"
   },
   "devDependencies": {

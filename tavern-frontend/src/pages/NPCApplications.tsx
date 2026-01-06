@@ -30,22 +30,12 @@ export default function NPCApplications() {
   const [deadline, setDeadline] = useState("");
 
   useEffect(() => {
-    if (!token) return;
-    
-    // Initial load
-    loadQuests();
-    
-    // Poll for new applications every 5 seconds (silent polling)
-    const interval = setInterval(() => {
-      loadQuests(true); // Silent polling - don't show loading state
-    }, 5000);
-    
-    return () => clearInterval(interval);
+    if (token) loadQuests();
   }, [token]);
 
-  const loadQuests = async (silent = false) => {
+  const loadQuests = async () => {
     if (!token) return;
-    if (!silent) setLoading(true);
+    setLoading(true);
     setError(null);
     try {
       const res = await api.get<{ success: boolean; data: Quest[] }>(
@@ -58,12 +48,9 @@ export default function NPCApplications() {
       );
       setQuests(withApplications);
     } catch (err: unknown) {
-      // Don't show error on polling failures, only on initial load
-      if (!silent) {
-        setError(err instanceof Error ? err.message : "Failed to load applications");
-      }
+      setError(err instanceof Error ? err.message : "Failed to load applications");
     } finally {
-      if (!silent) setLoading(false);
+      setLoading(false);
     }
   };
 

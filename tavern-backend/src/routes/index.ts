@@ -9,8 +9,6 @@ import chatRoutes from "./chat.routes";
 import adminRoutes from "./admin.routes";
 import notificationRoutes from "./notification.routes";
 import skillShopRoutes from "./skillShop.routes";
-import conflictRoutes from "./conflict.routes";
-import transactionRoutes from "./transaction.routes";
 
 
 const router = Router();
@@ -31,8 +29,6 @@ router.use("/admin", adminRoutes);
 router.use("/", chatRoutes);
 router.use("/", notificationRoutes);
 router.use("/", skillShopRoutes);
-router.use("/", conflictRoutes);
-router.use("/", transactionRoutes);
 
 
 export default router;

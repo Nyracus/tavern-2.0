@@ -51,27 +51,12 @@ export class SkillShopController {
         });
       }
 
-      // Get or create adventurer profile (auto-create if doesn't exist)
-      let profile = await AdventurerProfileModel.findOne({ userId: req.userId }).exec();
+      // Get adventurer profile
+      const profile = await AdventurerProfileModel.findOne({ userId: req.userId }).exec();
       if (!profile) {
-        // Auto-create a basic profile with default values
-        profile = await AdventurerProfileModel.create({
-          userId: req.userId,
-          title: "Novice Adventurer",
-          summary: "A new adventurer just starting their journey.",
-          class: "Fighter", // Default class, can be changed in dashboard
-          level: 1,
-          xp: 0,
-          rank: "F",
-          attributes: {
-            strength: 10,
-            dexterity: 10,
-            intelligence: 10,
-            charisma: 10,
-            vitality: 10,
-            luck: 10,
-          },
-          skills: [],
+        return res.status(404).json({
+          success: false,
+          message: 'Adventurer profile not found. Please create your profile first.',
         });
       }
 

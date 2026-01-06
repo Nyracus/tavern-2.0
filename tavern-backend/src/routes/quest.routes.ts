@@ -9,7 +9,6 @@ import {
   decideApplication,
   submitCompletion,
   payQuest,
-  rejectCompletion,
   updateQuest,
   deleteQuest,
   getRecommendedQuests,
@@ -65,18 +64,6 @@ router.post(
   verifyToken,
   authorizeRole("NPC"),
   payQuest
-);
-router.post(
-  "/quests/:questId/reject-completion",
-  verifyToken,
-  authorizeRole("NPC"),
-  rejectCompletion
-);
-router.post(
-  "/quests/:questId/reject-completion",
-  verifyToken,
-  authorizeRole("NPC"),
-  rejectCompletion
 );
 
 // Adventurer: apply and submit completion

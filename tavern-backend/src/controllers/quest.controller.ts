@@ -42,7 +42,6 @@ export const createQuest = async (
 
     const { title, description, difficulty, rewardGold, deadline } = req.body;
 
-    // Create quest without escrow (NPCs don't need to escrow upfront)
     const quest = await Quest.create({
       title,
       description,
@@ -257,55 +256,22 @@ export const updateQuest = async (
         .json({ success: false, message: "Not authorized" });
     }
 
-    // Allow editing Open quests normally
-    if (quest.status === "Open") {
-      if (title !== undefined) quest.title = title;
-      if (description !== undefined) quest.description = description;
-      if (difficulty !== undefined) quest.difficulty = difficulty;
-      if (rewardGold !== undefined) quest.rewardGold = rewardGold;
-      if (deadline !== undefined) quest.deadline = deadline ? new Date(deadline) : undefined;
-
-      await quest.save();
-      return res.json({ success: true, data: quest });
-    }
-
-    // For Accepted quests, track changes (adventurer can raise conflict if changed)
-    if (quest.status === "Accepted") {
-      const changesDetected: string[] = [];
-
-      if (description !== undefined && description !== quest.originalDescription) {
-        quest.description = description;
-        changesDetected.push("description");
-      }
-      if (deadline !== undefined) {
-        const newDeadline = deadline ? new Date(deadline) : undefined;
-        if (newDeadline?.getTime() !== quest.originalDeadline?.getTime()) {
-          quest.deadline = newDeadline;
-          changesDetected.push("deadline");
-        }
-      }
-
-      // Note: Title, difficulty, and rewardGold changes are not allowed after acceptance
-      if (title !== undefined || difficulty !== undefined || rewardGold !== undefined) {
-        return res.status(400).json({
-          success: false,
-          message: "Cannot change title, difficulty, or reward after quest acceptance",
-        });
-      }
-
-      await quest.save();
-
-      return res.json({
-        success: true,
-        data: quest,
-        changesDetected: changesDetected.length > 0 ? changesDetected : undefined,
+    if (quest.status !== "Open") {
+      return res.status(400).json({
+        success: false,
+        message: "Can only edit quests with status 'Open'",
       });
     }
 
-    return res.status(400).json({
-      success: false,
-      message: "Can only edit quests with status 'Open' or 'Accepted'",
-    });
+    if (title !== undefined) quest.title = title;
+    if (description !== undefined) quest.description = description;
+    if (difficulty !== undefined) quest.difficulty = difficulty;
+    if (rewardGold !== undefined) quest.rewardGold = rewardGold;
+    if (deadline !== undefined) quest.deadline = deadline ? new Date(deadline) : undefined;
+
+    await quest.save();
+
+    return res.json({ success: true, data: quest });
   } catch (err) {
     next(err);
   }
@@ -418,35 +384,11 @@ export const getRecommendedQuests = async (
     const adventurerRank = profile.rank || "F";
     const adventurerXP = profile.xp || 0;
     const adventurerLevel = profile.level || 1;
-    const adventurerClass = (profile.class || "").toLowerCase();
 
     // Get all open quests
     const allQuests = await Quest.find({ status: "Open" })
       .populate("npcId", "username displayName")
       .exec();
-
-    // Class-based quest category mapping (D&D inspired)
-    const classQuestMapping: Record<string, string[]> = {
-      "archer": ["ranged", "scouting", "hunting", "tracking", "stealth"],
-      "ranger": ["ranged", "scouting", "hunting", "tracking", "stealth", "survival"],
-      "mage": ["magic", "arcane", "enchanting", "research", "spellcasting"],
-      "wizard": ["magic", "arcane", "enchanting", "research", "spellcasting", "alchemy"],
-      "sorcerer": ["magic", "arcane", "spellcasting", "elemental"],
-      "fighter": ["combat", "melee", "defense", "guard", "warfare"],
-      "warrior": ["combat", "melee", "defense", "guard", "warfare", "tactics"],
-      "paladin": ["combat", "defense", "holy", "protection", "healing"],
-      "rogue": ["stealth", "thievery", "assassination", "lockpicking", "trap"],
-      "thief": ["stealth", "thievery", "lockpicking", "trap", "pickpocket"],
-      "cleric": ["healing", "holy", "protection", "support", "divine"],
-      "bard": ["performance", "diplomacy", "entertainment", "information", "support"],
-      "druid": ["nature", "healing", "survival", "animal", "elemental"],
-      "monk": ["combat", "martial", "meditation", "discipline", "speed"],
-      "barbarian": ["combat", "melee", "rage", "strength", "endurance"],
-    };
-
-    // Normalize class name and get quest categories
-    const normalizedClass = adventurerClass.replace(/\s+/g, "").toLowerCase();
-    const preferredCategories = classQuestMapping[normalizedClass] || [];
 
     // Rank to difficulty mapping and scoring
     const rankDifficultyMap: Record<string, { difficulties: string[]; baseScore: number }> = {
@@ -509,15 +451,6 @@ export const getRecommendedQuests = async (
         }
       }
 
-      // Class-based bonus: check if quest title/description matches class preferences
-      if (preferredCategories.length > 0) {
-        const questText = `${quest.title} ${quest.description}`.toLowerCase();
-        const classMatch = preferredCategories.some(cat => questText.includes(cat));
-        if (classMatch) {
-          score += 0.15; // Significant bonus for class-matched quests
-        }
-      }
-
       // Reward gold bonus (higher rewards = slightly better match)
       if (quest.rewardGold) {
         const goldBonus = Math.min(quest.rewardGold / 1000, 0.1);
@@ -528,9 +461,6 @@ export const getRecommendedQuests = async (
         ...questObj,
         recommendationScore: Math.min(score, 1.0),
         recommendationRank: matchRank,
-        recommendedForClass: preferredCategories.length > 0 && preferredCategories.some(cat => 
-          `${quest.title} ${quest.description}`.toLowerCase().includes(cat)
-        ),
       };
     });
 
@@ -601,10 +531,6 @@ export const decideApplication = async (
       quest.deadline = new Date(deadline);
     }
 
-    // Store original quest details for change detection (for conflict system)
-    quest.originalDescription = quest.description;
-    quest.originalDeadline = quest.deadline || undefined;
-
     // Reject all other applications
     quest.applications.forEach((app) => {
       if (app._id.toString() !== applicationId) {
@@ -674,21 +600,23 @@ export const submitCompletion = async (
       });
     }
 
-    // Check if deadline has passed - prevent submission after deadline
     const now = new Date();
-    if (quest.deadline && now > quest.deadline) {
-      return res.status(400).json({
-        success: false,
-        message: `Cannot submit completion after deadline. Deadline was ${quest.deadline.toLocaleString()}.`,
-      });
-    }
-
     quest.status = "Completed";
     quest.completionSubmittedAt = now;
     quest.completionReportUrl = reportUrl;
 
-    // Note: Deadline check is done above - if deadline passed, submission is blocked
-    // So we don't need to check for deadline anomalies here anymore
+    // Deadline anomaly: completion after deadline
+    if (quest.deadline && now > quest.deadline) {
+      await createQuestAnomaly({
+        subjectUserId: quest.adventurerId!,
+        subjectRole: "ADVENTURER",
+        type: "QUEST_DEADLINE_MISSED",
+        severity: "HIGH",
+        summary: "Quest completed after the agreed deadline.",
+        details: `Quest ${quest.title} was submitted on ${now.toISOString()} after deadline ${quest.deadline.toISOString()}.`,
+        questId: quest._id,
+      });
+    }
 
     await quest.save();
 
@@ -747,21 +675,12 @@ export const payQuest = async (
       });
     }
 
-    // Check if quest has conflict
-    if (quest.hasConflict) {
-      return res.status(400).json({
-        success: false,
-        message: "Cannot pay quest with active conflict. Please resolve conflict first.",
-      });
-    }
-
     const now = new Date();
     const paymentAmount =
       typeof amount === "number" && !Number.isNaN(amount)
         ? amount
         : quest.rewardGold || 0;
-
-    // Pay adventurer directly (no escrow system for NPCs)
+    
     quest.status = "Paid";
     quest.paidAt = now;
     quest.paidGold = paymentAmount;
@@ -771,36 +690,9 @@ export const payQuest = async (
       const { UserModel } = await import("../models/user.model");
       const adventurer = await UserModel.findById(quest.adventurerId).exec();
       if (adventurer) {
-        const previousGold = adventurer.gold || 0;
-        adventurer.gold = previousGold + paymentAmount;
+        adventurer.gold = (adventurer.gold || 0) + paymentAmount;
         await adventurer.save();
-        console.log(`[PAYMENT] Awarded ${paymentAmount} gold to adventurer ${quest.adventurerId}. Previous: ${previousGold}, New: ${adventurer.gold}`);
-
-        // Create transaction record for payment
-        const { transactionService } = await import("../services/transaction.service");
-        await transactionService.createTransaction(
-          String(quest._id),
-          "ESCROW_RELEASE", // Keep transaction type for consistency, but it's just a payment now
-          paymentAmount,
-          String(quest.npcId),
-          String(quest.adventurerId),
-          `Payment for quest: ${quest.title}`,
-          {}
-        );
-
-        // Send payment notification to adventurer
-        const { notificationService } = await import("../services/notification.service");
-        await notificationService.notifyQuestPaymentReceived(
-          String(quest.adventurerId),
-          String(quest._id),
-          quest.title,
-          paymentAmount
-        );
-      } else {
-        console.error(`[PAYMENT] Adventurer not found: ${quest.adventurerId}`);
       }
-    } else {
-      console.error(`[PAYMENT] Quest ${quest._id} has no adventurerId assigned`);
     }
 
     // Delayed payment anomaly: payment more than 24h after completion
@@ -828,62 +720,4 @@ export const payQuest = async (
   }
 };
 
-// NPC rejects quest completion (allows adventurer to raise conflict)
-export const rejectCompletion = async (
-  req: AuthRequest,
-  res: Response,
-  next: NextFunction
-) => {
-  try {
-    if (!req.userId) {
-      return res
-        .status(401)
-        .json({ success: false, message: "Unauthenticated" });
-    }
 
-    const { questId } = req.params;
-    const { reason } = req.body as { reason?: string };
-
-    const quest = await Quest.findById(questId).exec();
-    if (!quest) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Quest not found" });
-    }
-
-    if (quest.npcId.toString() !== req.userId) {
-      return res
-        .status(403)
-        .json({ success: false, message: "Not authorized" });
-    }
-
-    if (quest.status !== "Completed") {
-      return res.status(400).json({
-        success: false,
-        message: "Can only reject quests with status 'Completed'",
-      });
-    }
-
-    // Revert quest status back to "Accepted" so adventurer can resubmit or raise conflict
-    quest.status = "Accepted";
-    quest.completionSubmittedAt = undefined;
-    quest.completionReportUrl = undefined;
-    await quest.save();
-
-    // Notify adventurer about rejection
-    const { notificationService } = await import("../services/notification.service");
-    if (quest.adventurerId) {
-      await notificationService.createNotification(
-        String(quest.adventurerId),
-        "Quest Completion Rejected",
-        `Your completion submission for "${quest.title}" was rejected. ${reason ? `Reason: ${reason}` : "You can resubmit or raise a conflict."}`,
-        "QUEST_APPLICATION_REJECTED",
-        { questId: String(quest._id) }
-      );
-    }
-
-    return res.json({ success: true, data: quest, message: "Completion rejected. Adventurer can resubmit or raise a conflict." });
-  } catch (err) {
-    next(err);
-  }
-};
