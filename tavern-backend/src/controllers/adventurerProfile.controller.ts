@@ -24,11 +24,6 @@ const calculateRank = (xp: number): string => {
   return "F";
 };
 
-// Helper: calculate level from XP (1 level per 100 XP)
-const calculateLevel = (xp: number): number => {
-  return Math.floor(xp / 100) + 1;
-};
-
 // Helper used by quest.controller to award XP
 export const addXP = async (userId: string, earnedXP: number) => {
   const profile = await AdventurerProfileModel.findOne({ userId });
@@ -36,22 +31,13 @@ export const addXP = async (userId: string, earnedXP: number) => {
     throw new Error("Adventurer profile not found");
   }
 
-  // use `any` so TS doesn't complain about xp/rank not being in the interface yet
+  // use `any` so TS doesn’t complain about xp/rank not being in the interface yet
   const p: any = profile;
   const currentXp = p.xp ?? 0;
-  const currentLevel = p.level ?? 1;
   const newXp = currentXp + earnedXP;
-  const newLevel = calculateLevel(newXp);
 
   p.xp = newXp;
   p.rank = calculateRank(newXp);
-  p.level = newLevel;
-
-  // Grant stat points for level ups (1 point per level gained)
-  const levelsGained = newLevel - currentLevel;
-  if (levelsGained > 0) {
-    p.availableStatPoints = (p.availableStatPoints ?? 0) + levelsGained;
-  }
 
   await profile.save();
   return profile;
@@ -166,53 +152,6 @@ export class AdventurerProfileController {
       );
 
       res.json({ success: true, data: profile });
-    } catch (err) {
-      next(err);
-    }
-  }
-
-  // Allocate stat point to strength, dexterity, or intelligence
-  async allocateStatPoint(req: AuthRequest, res: Response, next: NextFunction) {
-    try {
-      if (!req.userId) {
-        throw new AppError(401, "Not authenticated");
-      }
-
-      const { stat } = req.body as { stat: "strength" | "dexterity" | "intelligence" };
-      
-      if (!stat || !["strength", "dexterity", "intelligence"].includes(stat)) {
-        throw new AppError(400, "Invalid stat. Must be 'strength', 'dexterity', or 'intelligence'");
-      }
-
-      const profile = await AdventurerProfileModel.findOne({ userId: req.userId });
-      if (!profile) {
-        throw new AppError(404, "Adventurer profile not found");
-      }
-
-      const p: any = profile;
-      const availablePoints = p.availableStatPoints ?? 0;
-
-      if (availablePoints < 1) {
-        throw new AppError(400, "No available stat points to allocate");
-      }
-
-      // Check if stat is at max (20)
-      const currentStatValue = p.attributes[stat];
-      if (currentStatValue >= 20) {
-        throw new AppError(400, `${stat} is already at maximum (20)`);
-      }
-
-      // Allocate the stat point
-      p.attributes[stat] = currentStatValue + 1;
-      p.availableStatPoints = availablePoints - 1;
-
-      await profile.save();
-
-      res.json({ 
-        success: true, 
-        data: profile,
-        message: `+1 ${stat} allocated! ${p.availableStatPoints} stat point(s) remaining.`
-      });
     } catch (err) {
       next(err);
     }

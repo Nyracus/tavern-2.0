@@ -49,12 +49,4 @@ router.delete(
   adventurerProfileController.deleteSkill.bind(adventurerProfileController)
 );
 
-// Stat point allocation
-router.post(
-  "/adventurers/me/allocate-stat",
-  verifyToken,
-  authorizeRole("ADVENTURER"),
-  adventurerProfileController.allocateStatPoint.bind(adventurerProfileController)
-);
-
 export default router;

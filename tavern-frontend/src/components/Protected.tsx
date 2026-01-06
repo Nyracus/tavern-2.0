@@ -12,7 +12,7 @@ export default function Protected({ children, roles }: ProtectedProps) {
   if (!token) return <Navigate to="/login" replace />;
 
   if (roles && user && !roles.includes(user.role)) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/" replace />;
   }
 
   return <>{children}</>;

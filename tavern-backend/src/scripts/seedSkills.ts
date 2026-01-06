@@ -148,4 +148,3 @@ async function seedSkills() {
 
 seedSkills();
 
-

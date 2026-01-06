@@ -66,4 +66,3 @@ ConflictSchema.index({ raisedBy: 1 });
 export const ConflictModel = model<ConflictDocument>("Conflict", ConflictSchema);
 
 
-

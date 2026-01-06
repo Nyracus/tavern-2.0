@@ -74,7 +74,7 @@ export default function GuildmasterChats() {
             </p>
           </div>
           <Link
-            to="/dashboard"
+            to="/"
             className="text-xs md:text-sm px-3 py-2 rounded-lg border border-slate-600 text-slate-300 hover:bg-slate-700/50"
           >
             ← Back to Dashboard

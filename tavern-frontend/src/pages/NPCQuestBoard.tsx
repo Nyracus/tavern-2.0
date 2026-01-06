@@ -35,6 +35,7 @@ type QuestForm = {
   description: string;
   difficulty: QuestDifficulty;
   rewardGold: number;
+  deadline?: string;
 };
 
 export default function NPCQuestBoard() {
@@ -51,6 +52,7 @@ export default function NPCQuestBoard() {
     description: "",
     difficulty: "Easy",
     rewardGold: 0,
+    deadline: "",
   });
 
   useEffect(() => {
@@ -98,6 +100,9 @@ export default function NPCQuestBoard() {
       difficulty: form.difficulty,
       rewardGold: form.rewardGold,
     };
+    if (form.deadline) {
+      payload.deadline = new Date(form.deadline).toISOString();
+    }
 
     try {
       if (editingQuest) {
@@ -115,7 +120,7 @@ export default function NPCQuestBoard() {
       }
       setShowForm(false);
       setEditingQuest(null);
-      setForm({ title: "", description: "", difficulty: "Easy", rewardGold: 0 });
+      setForm({ title: "", description: "", difficulty: "Easy", rewardGold: 0, deadline: "" });
       await loadQuests();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to save quest");
@@ -129,6 +134,7 @@ export default function NPCQuestBoard() {
       description: quest.description,
       difficulty: quest.difficulty,
       rewardGold: quest.rewardGold || 0,
+      deadline: quest.deadline ? new Date(quest.deadline).toISOString().slice(0, 16) : "",
     });
     setShowForm(true);
   };
@@ -207,14 +213,14 @@ export default function NPCQuestBoard() {
               onClick={() => {
                 setShowForm(!showForm);
                 setEditingQuest(null);
-                setForm({ title: "", description: "", difficulty: "Easy", rewardGold: 0 });
+                setForm({ title: "", description: "", difficulty: "Easy", rewardGold: 0, deadline: "" });
               }}
               className="btn bg-purple-600 hover:bg-purple-700 text-sm px-4 py-2"
             >
               {showForm ? "Cancel" : "+ Post Quest"}
             </button>
             <Link
-              to="/dashboard"
+              to="/"
               className="text-xs md:text-sm px-3 py-2 rounded-lg border border-slate-600 text-slate-300 hover:bg-slate-700/50"
             >
               ← Back to Dashboard
@@ -268,6 +274,15 @@ export default function NPCQuestBoard() {
                   value={form.rewardGold}
                   onChange={(e) => setForm({ ...form, rewardGold: Number(e.target.value) })}
                   required
+                />
+              </div>
+              <div>
+                <label className="text-sm font-semibold">Deadline (optional)</label>
+                <input
+                  className="input bg-slate-800"
+                  type="datetime-local"
+                  value={form.deadline}
+                  onChange={(e) => setForm({ ...form, deadline: e.target.value })}
                 />
               </div>
             </div>

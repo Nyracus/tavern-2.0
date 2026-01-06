@@ -34,7 +34,6 @@ type AdventurerProfile = {
   skills: AdventurerSkill[];
   xp?: number;
   rank?: string;
-  availableStatPoints?: number;
 };
 
 type ApiResponse<T> = {
@@ -264,29 +263,6 @@ export default function AdventurerProfileManager() {
     }
   };
 
-  const handleAllocateStat = async (stat: "strength" | "dexterity" | "intelligence") => {
-    if (!token || !profile) return;
-    setError(null);
-    try {
-      const res = await api.post<ApiResponse<AdventurerProfile> & { message?: string }>(
-        "/adventurers/me/allocate-stat",
-        { stat },
-        token
-      );
-      setProfile(res.data);
-      // Update form attributes to reflect new stat values
-      setForm((prev) => ({
-        ...prev,
-        attributes: res.data.attributes,
-      }));
-      // Trigger a custom event to refresh profile display
-      window.dispatchEvent(new CustomEvent('profileUpdated'));
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Failed to allocate stat point";
-      setError(msg);
-    }
-  };
-
   const handleProfileSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!token) return;
@@ -404,44 +380,6 @@ export default function AdventurerProfileManager() {
             <p>CHA: {profile.attributes.charisma}</p>
             <p>VIT: {profile.attributes.vitality}</p>
             <p>LUCK: {profile.attributes.luck}</p>
-          </div>
-        </div>
-      )}
-
-      {/* Stat Point Allocation */}
-      {profile && (profile.availableStatPoints ?? 0) > 0 && (
-        <div className="rounded-2xl border border-purple-500/40 bg-slate-900/70 p-5 space-y-3">
-          <h3 className="text-lg font-semibold flex items-center gap-2">
-            ⭐ Stat Point Allocation
-          </h3>
-          <p className="text-sm text-slate-300">
-            You have <span className="font-bold text-purple-300">{profile.availableStatPoints}</span> unallocated stat point{profile.availableStatPoints !== 1 ? 's' : ''} from leveling up!
-          </p>
-          <p className="text-xs text-slate-400">
-            Allocate +1 point to Strength, Dexterity, or Intelligence (max 20 per stat)
-          </p>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => handleAllocateStat("strength")}
-              disabled={profile.attributes.strength >= 20}
-              className="btn bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm px-4 py-2"
-            >
-              +1 STR {profile.attributes.strength >= 20 && "(MAX)"}
-            </button>
-            <button
-              onClick={() => handleAllocateStat("dexterity")}
-              disabled={profile.attributes.dexterity >= 20}
-              className="btn bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm px-4 py-2"
-            >
-              +1 DEX {profile.attributes.dexterity >= 20 && "(MAX)"}
-            </button>
-            <button
-              onClick={() => handleAllocateStat("intelligence")}
-              disabled={profile.attributes.intelligence >= 20}
-              className="btn bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm px-4 py-2"
-            >
-              +1 INT {profile.attributes.intelligence >= 20 && "(MAX)"}
-            </button>
           </div>
         </div>
       )}

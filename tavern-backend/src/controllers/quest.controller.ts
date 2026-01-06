@@ -711,22 +711,6 @@ export const submitCompletion = async (
   }
 };
 
-// Helper: Get XP reward based on quest difficulty
-const getXPForDifficulty = (difficulty: string): number => {
-  switch (difficulty) {
-    case "Easy":
-      return 100; // F rank quests
-    case "Medium":
-      return 200; // E rank quests
-    case "Hard":
-      return 400; // D rank quests
-    case "Epic":
-      return 800; // C+ rank quests
-    default:
-      return 100; // Default to Easy
-  }
-};
-
 // NPC marks quest as paid and optionally triggers delayed-payment anomaly
 export const payQuest = async (
   req: AuthRequest,
@@ -812,17 +796,6 @@ export const payQuest = async (
           quest.title,
           paymentAmount
         );
-
-        // Award XP based on quest difficulty and update rank
-        const { addXP } = await import("./adventurerProfile.controller");
-        const xpReward = getXPForDifficulty(quest.difficulty);
-        try {
-          await addXP(String(quest.adventurerId), xpReward);
-          console.log(`[XP] Awarded ${xpReward} XP to adventurer ${quest.adventurerId} for completing ${quest.difficulty} quest: ${quest.title}`);
-        } catch (xpError) {
-          // Log error but don't fail the payment if XP award fails
-          console.error(`[XP] Failed to award XP to adventurer ${quest.adventurerId}:`, xpError);
-        }
       } else {
         console.error(`[PAYMENT] Adventurer not found: ${quest.adventurerId}`);
       }

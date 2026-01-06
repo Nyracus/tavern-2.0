@@ -61,12 +61,6 @@ export default function Dashboard() {
                 >
                   📜 Ledger
                 </Link>
-                <Link
-                  to="/admin/users"
-                  className="text-xs md:text-sm px-3 py-2 rounded-lg border border-red-500/60 text-red-300 hover:bg-red-500/10"
-                >
-                  👥 Manage Users
-                </Link>
               </>
             )}
             {isNPC && (
@@ -153,15 +147,12 @@ export default function Dashboard() {
                   Review submitted reports and approve payments.
                 </div>
               </Link>
-              <Link
-                to="/npc/chats"
-                className="rounded-xl border border-indigo-500/40 bg-slate-950/70 px-4 py-3 text-sm hover:bg-indigo-500/10"
-              >
+              <div className="rounded-xl border border-slate-700 bg-slate-950/70 px-4 py-3 text-sm opacity-80">
                 <div className="font-semibold">💬 Quest Chats</div>
-                <div className="text-xs text-slate-300">
-                  View and continue conversations with adventurers.
+                <div className="text-xs text-slate-400">
+                  Coming soon: communicate with adventurers and guildmaster.
                 </div>
-              </Link>
+              </div>
             </div>
           </section>
         )}
@@ -251,15 +242,6 @@ export default function Dashboard() {
                   <div className="font-semibold">⚔️ Full Quest Board</div>
                   <div className="text-xs text-slate-300">
                     Browse all quests with search and filters.
-                  </div>
-                </Link>
-                <Link
-                  to="/adventurer/chats"
-                  className="rounded-xl border border-indigo-500/40 bg-slate-950/70 px-4 py-3 text-sm hover:bg-indigo-500/10"
-                >
-                  <div className="font-semibold">💬 Quest Chats</div>
-                  <div className="text-xs text-slate-300">
-                    View and continue conversations with NPCs.
                   </div>
                 </Link>
               </div>

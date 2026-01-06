@@ -76,7 +76,7 @@ export default function SkillsShopPage() {
             </p>
           </div>
           <Link
-            to="/dashboard"
+            to="/"
             className="text-xs md:text-sm px-3 py-2 rounded-lg border border-purple-500/60 text-purple-300 hover:bg-purple-500/10"
           >
             ← Back to Home
@@ -97,5 +97,4 @@ export default function SkillsShopPage() {
     </div>
   );
 }
-
 
