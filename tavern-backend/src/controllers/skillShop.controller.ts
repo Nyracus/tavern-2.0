@@ -63,6 +63,7 @@ export class SkillShopController {
           level: 1,
           xp: 0,
           rank: "F",
+          availableStatPoints: 0,
           attributes: {
             strength: 10,
             dexterity: 10,

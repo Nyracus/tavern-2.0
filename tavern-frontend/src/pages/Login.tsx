@@ -15,7 +15,7 @@ export default function Login() {
     setError(null);
     try {
       await login(emailOrUsername, password);           // backend call OK
-      navigate("/", { replace: true });                 // ✅ redirect to dashboard
+      navigate("/dashboard", { replace: true });        // ✅ redirect to dashboard
     } catch (err: unknown) {
       const error = err as Error;
       setError(error.message || "Login failed");

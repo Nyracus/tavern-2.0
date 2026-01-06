@@ -107,13 +107,13 @@ export default function AdventurerLeaderboard() {
                     </span>
                   </div>
 
-                  {/* Title */}
+                  {/* Name and Title */}
                   <div className="flex flex-col">
                     <span className="font-medium text-slate-100">
-                      {row.title || "Unknown"}
+                      {row.displayName || row.username || "Unknown"}
                     </span>
                     <span className="text-[11px] text-slate-400">
-                      Adventurer ID: {row.userId}
+                      {row.title || "Adventurer"}
                     </span>
                   </div>
 

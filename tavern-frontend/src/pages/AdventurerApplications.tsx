@@ -212,7 +212,7 @@ export default function AdventurerApplications() {
               ⚔️ Browse Quests
             </Link>
             <Link
-              to="/"
+              to="/dashboard"
               className="text-xs md:text-sm px-3 py-2 rounded-lg border border-slate-600 text-slate-300 hover:bg-slate-700/50"
             >
               ← Back to Dashboard

@@ -48,6 +48,7 @@ export default function AdventurerQuestBoard() {
   const [selectedQuest, setSelectedQuest] = useState<Quest | null>(null);
   const [applyNote, setApplyNote] = useState("");
   const [showApplyForm, setShowApplyForm] = useState(false);
+  const [applying, setApplying] = useState(false);
   const [profile, setProfile] = useState<AdventurerProfile | null>(null);
   const [chatQuest, setChatQuest] = useState<Quest | null>(null);
   
@@ -156,20 +157,25 @@ export default function AdventurerQuestBoard() {
   }, [searchQuery, difficultyFilter, classFilter, minReward, maxReward, sortBy, sortOrder]);
 
   const handleApply = async (questId: string) => {
-    if (!token) return;
+    if (!token || applying) return;
     setError(null);
+    setApplying(true);
     try {
       await api.post<{ success: boolean; data: Quest }>(
         `/quests/${questId}/apply`,
         { note: applyNote || undefined },
         token
       );
+      // Close modal immediately after successful application
       setShowApplyForm(false);
       setApplyNote("");
       setSelectedQuest(null);
+      // Reload quests to update the UI
       await loadQuests();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to apply to quest");
+    } finally {
+      setApplying(false);
     }
   };
 
@@ -237,7 +243,7 @@ export default function AdventurerQuestBoard() {
               📋 My Applications
             </Link>
             <Link
-              to="/"
+              to="/dashboard"
               className="text-xs md:text-sm px-3 py-2 rounded-lg border border-slate-600 text-slate-300 hover:bg-slate-700/50"
             >
               ← Back to Dashboard
@@ -482,8 +488,21 @@ export default function AdventurerQuestBoard() {
 
         {/* Apply form modal */}
         {showApplyForm && selectedQuest && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-slate-900 rounded-2xl border border-blue-500/40 w-full max-w-md p-6 space-y-4">
+          <div 
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+            onClick={(e) => {
+              // Close modal when clicking outside
+              if (e.target === e.currentTarget && !applying) {
+                setShowApplyForm(false);
+                setSelectedQuest(null);
+                setApplyNote("");
+              }
+            }}
+          >
+            <div 
+              className="bg-slate-900 rounded-2xl border border-blue-500/40 w-full max-w-md p-6 space-y-4"
+              onClick={(e) => e.stopPropagation()}
+            >
               <h3 className="text-xl font-semibold">Apply to Quest: {selectedQuest.title}</h3>
               <div>
                 <label className="text-sm font-semibold">Application Note (optional)</label>
@@ -498,8 +517,9 @@ export default function AdventurerQuestBoard() {
                 <button
                   onClick={() => handleApply(selectedQuest._id)}
                   className="btn bg-blue-600 hover:bg-blue-700 flex-1"
+                  disabled={applying}
                 >
-                  Submit Application
+                  {applying ? "Submitting..." : "Submit Application"}
                 </button>
                 <button
                   onClick={() => {
@@ -508,6 +528,7 @@ export default function AdventurerQuestBoard() {
                     setApplyNote("");
                   }}
                   className="btn bg-slate-600 hover:bg-slate-700"
+                  disabled={applying}
                 >
                   Cancel
                 </button>

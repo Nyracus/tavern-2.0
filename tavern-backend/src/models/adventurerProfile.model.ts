@@ -18,6 +18,7 @@ export interface IAdventurerProfile extends Document {
   level: number;  // adventurer level
   xp?: number;    // Experience points
   rank?: string;  // Rank: F, E, D, C, B, A, S, SS, SSS
+  availableStatPoints?: number; // Unallocated stat points from level ups
 
   race?: string;
   background?: string;
@@ -61,6 +62,7 @@ const AdventurerProfileSchema = new Schema<IAdventurerProfile>(
       enum: ["F", "E", "D", "C", "B", "A", "S", "SS", "SSS"],
       default: "F",
     },
+    availableStatPoints: { type: Number, default: 0, min: 0 },
 
     race: { type: String },
     background: { type: String },

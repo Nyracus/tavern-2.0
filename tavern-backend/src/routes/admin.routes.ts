@@ -15,6 +15,13 @@ router.patch(
   adminController.updateAnomalyStatus.bind(adminController)
 );
 
+// Delete user (NPC or Adventurer) by ID
+router.delete(
+  "/users/:id",
+  ...adminGuard,
+  adminController.deleteUser.bind(adminController)
+);
+
 export default router;
 
 
