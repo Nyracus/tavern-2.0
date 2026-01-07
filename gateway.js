@@ -8,8 +8,27 @@ const cors = require('cors');
 
 const app = express();
 
+// Handle OPTIONS requests FIRST (before any other middleware)
+// This is critical for CORS preflight requests
+app.options('*', (req, res) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+  res.header('Access-Control-Max-Age', '86400');
+  res.status(200).end();
+});
+
 // Enable CORS for all routes (allow frontend to call API Gateway)
-app.use(cors());
+// Configure CORS with explicit options for preflight requests
+app.use(cors({
+  origin: true, // Allow all origins (or specify your frontend URL)
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  exposedHeaders: ['Content-Type'],
+  maxAge: 86400, // 24 hours
+}));
+
 app.use(express.json());
 
 // Backend instances
@@ -77,8 +96,18 @@ const proxyOptions = {
   logLevel: 'debug',
 };
 
-// API proxy
-app.use('/api', createProxyMiddleware(proxyOptions));
+// Create proxy middleware instance
+const apiProxy = createProxyMiddleware(proxyOptions);
+
+// API proxy - exclude OPTIONS requests (handled above)
+app.use('/api', (req, res, next) => {
+  // Don't proxy OPTIONS requests - they're handled by CORS middleware above
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+  // Proxy all other requests
+  apiProxy(req, res, next);
+});
 
 // Root endpoint
 app.get('/', (req, res) => {
