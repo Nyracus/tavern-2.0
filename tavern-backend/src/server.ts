@@ -13,6 +13,15 @@ const start = async () => {
   // Connect to MongoDB
   await connectDB();
   
+  // Verify MongoDB connection before starting deadline checker
+  const mongoose = await import('mongoose');
+  const isMongoConnected = mongoose.default.connection.readyState === 1;
+  
+  if (!isMongoConnected) {
+    console.error('❌ MongoDB not connected! Please set MONGO_URI environment variable.');
+    console.error('⚠️  Server will start but database operations will fail.');
+  }
+  
   // Connect to Redis (non-blocking)
   try {
     // For lazy connect, explicitly connect only in production
@@ -35,8 +44,12 @@ const start = async () => {
 
   app.listen(PORT, () => {
     console.log(`🚀 Tavern backend running on port ${PORT} (Instance: ${INSTANCE_ID})`);
-    // Start deadline checker (checks every hour)
-    deadlineCheckerService.startChecking(60);
+    // Start deadline checker only if MongoDB is connected
+    if (isMongoConnected) {
+      deadlineCheckerService.startChecking(60);
+    } else {
+      console.warn('⚠️  Deadline checker not started (MongoDB not connected)');
+    }
   });
 };
 
