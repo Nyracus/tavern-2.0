@@ -7,7 +7,8 @@ export type TransactionType =
   | "ESCROW_REFUND" // Gold refunded from escrow to NPC
   | "CONFLICT_ESCROW" // Gold escrowed by adventurer for conflict
   | "CONFLICT_PAYOUT" // Gold paid out during conflict resolution
-  | "DIRECT_PAYMENT"; // Direct payment (legacy, before escrow)
+  | "DIRECT_PAYMENT" // Direct payment (legacy, before escrow)
+  | "QUEST_CANCELLATION_PENALTY"; // Gold deducted when adventurer cancels accepted quest
 
 export type TransactionStatus = "PENDING" | "COMPLETED" | "FAILED" | "CANCELLED";
 
@@ -36,6 +37,7 @@ const TransactionSchema = new Schema<TransactionDocument>(
         "CONFLICT_ESCROW",
         "CONFLICT_PAYOUT",
         "DIRECT_PAYMENT",
+        "QUEST_CANCELLATION_PENALTY",
       ],
       required: true,
     },

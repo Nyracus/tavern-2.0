@@ -130,6 +130,15 @@ export default function Dashboard() {
                 </div>
               </Link>
               <Link
+                to="/npc/organization"
+                className="rounded-xl border border-fuchsia-500/40 bg-slate-950/70 px-4 py-3 text-sm hover:bg-fuchsia-500/10"
+              >
+                <div className="font-semibold">🏛️ Organization</div>
+                <div className="text-xs text-slate-300">
+                  Manage your organization identity and trust.
+                </div>
+              </Link>
+              <Link
                 to="/npc/applications"
                 className="rounded-xl border border-blue-500/40 bg-slate-950/70 px-4 py-3 text-sm hover:bg-blue-500/10"
               >

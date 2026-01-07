@@ -27,6 +27,9 @@ export class AuthService {
       displayName: data.displayName,
       avatarUrl: data.avatarUrl,
       role: data.role || "ADVENTURER",
+      // Only NEW NPC/ADVENTURER must create a profile before seeing dashboard.
+      // Existing users won't have this field set, so they are not forced through onboarding.
+      needsProfileSetup: (data.role || "ADVENTURER") !== "GUILD_MASTER",
       password: hash,
     });
 
@@ -88,6 +91,7 @@ export class AuthService {
       avatarUrl: u.avatarUrl,
       role: u.role,
       gold: u.gold || 0, // Include gold in public user data
+      needsProfileSetup: Boolean(u.needsProfileSetup),
       createdAt: u.createdAt,
       updatedAt: u.updatedAt,
     };

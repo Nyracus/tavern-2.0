@@ -12,6 +12,7 @@ export type User = {
   avatarUrl?: string | null;
   role: Role;
   gold?: number;
+  needsProfileSetup?: boolean;
 };
 
 type AuthCtx = {
@@ -78,13 +79,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const register = async (payload: any) => {
-    const res = await api.post<{ success: boolean; token: string; user: User }>(
+    // Registration should not auto-login; user must login explicitly.
+    await api.post<{ success: boolean; token: string; user: User }>(
       "/auth/register",
       payload
     );
-    setToken(res.token);
-    localStorage.setItem("tavern_token", res.token);
-    setUser(res.user);
   };
 
   const logout = () => {

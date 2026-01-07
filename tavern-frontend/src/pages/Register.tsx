@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { useNavigate } from "react-router-dom";
 
 type Role = "ADVENTURER" | "NPC" | "GUILD_MASTER";
 
@@ -16,6 +17,7 @@ type RegisterForm = {
 export default function Register() {
   // rename to avoid shadowing the component/file name
   const { register: registerUser } = useAuth();
+  const navigate = useNavigate();
 
   const [form, setForm] = useState<RegisterForm>({
     email: "",
@@ -34,13 +36,9 @@ export default function Register() {
     setSuccess(null);
     try {
       await registerUser(form);
-      // Redirect will be handled by ProfileProtected after login
-      // For now, just show success message
-      setSuccess("Your guild record has been inscribed. Redirecting to profile creation...");
-      // Small delay to show message, then redirect happens automatically via ProfileProtected
-      setTimeout(() => {
-        window.location.href = "/dashboard";
-      }, 1500);
+      // Registration should not auto-login; user should login first.
+      setSuccess("Your guild record has been inscribed. Please login to continue.");
+      setTimeout(() => navigate("/login"), 700);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Register failed";
       setError(msg);

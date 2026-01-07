@@ -324,6 +324,30 @@ export default function AdventurerApplications() {
                         >
                           💬 Chat
                         </button>
+                        <button
+                          onClick={async () => {
+                            if (!confirm(`Are you sure you want to cancel this quest?\n\n⚠️ WARNING: Cancelling will deduct 50% of the reward (${Math.floor((quest.rewardGold || 0) * 0.5)} gold) from your account.\n\nQuest: ${quest.title}\nReward: ${quest.rewardGold || 0} gold\nPenalty: ${Math.floor((quest.rewardGold || 0) * 0.5)} gold`)) {
+                              return;
+                            }
+                            setError(null);
+                            try {
+                              const res = await api.post<{ success: boolean; data: Quest; penalty: number; newGoldBalance: number; message: string }>(
+                                `/quests/${quest._id}/cancel`,
+                                {},
+                                token
+                              );
+                              if (res.message) {
+                                alert(res.message);
+                              }
+                              await loadQuests();
+                            } catch (err: unknown) {
+                              setError(err instanceof Error ? err.message : "Failed to cancel quest");
+                            }
+                          }}
+                          className="btn bg-red-600 hover:bg-red-700 text-sm px-4 py-2"
+                        >
+                          ❌ Cancel Quest
+                        </button>
                         {!quest.hasConflict && (canRaiseReportRejectedConflict(quest) || canRaiseQuestChangedConflict(quest)) && (
                           <button
                             onClick={() => {

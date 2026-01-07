@@ -161,26 +161,28 @@ export class ChatController {
           let lastMessage = null;
           if (messages[0]) {
             await messages[0].populate("senderId", "username displayName");
+            const msg: any = messages[0];
             lastMessage = {
-              _id: messages[0]._id.toString(),
-              content: messages[0].content,
-              senderId: messages[0].senderId,
-              createdAt: messages[0].createdAt.toISOString(),
+              _id: msg._id.toString(),
+              content: msg.content,
+              senderId: msg.senderId,
+              createdAt: msg.createdAt.toISOString(),
             };
           }
 
+          const questData: any = quest;
           return {
             quest: {
-              _id: quest._id.toString(),
-              title: quest.title,
-              status: quest.status,
+              _id: questData._id.toString(),
+              title: questData.title,
+              status: questData.status,
               npcName:
-                typeof quest.npcId === "object"
-                  ? quest.npcId.displayName || quest.npcId.username
+                typeof questData.npcId === "object"
+                  ? questData.npcId.displayName || questData.npcId.username
                   : null,
               adventurerName:
-                quest.adventurerId && typeof quest.adventurerId === "object"
-                  ? quest.adventurerId.displayName || quest.adventurerId.username
+                questData.adventurerId && typeof questData.adventurerId === "object"
+                  ? questData.adventurerId.displayName || questData.adventurerId.username
                   : null,
             },
             messageCount,
@@ -230,22 +232,24 @@ export class ChatController {
           let lastMessage = null;
           if (messages[0]) {
             await messages[0].populate("senderId", "username displayName");
+            const msg: any = messages[0];
             lastMessage = {
-              _id: messages[0]._id.toString(),
-              content: messages[0].content,
-              senderId: messages[0].senderId,
-              createdAt: messages[0].createdAt.toISOString(),
+              _id: msg._id.toString(),
+              content: msg.content,
+              senderId: msg.senderId,
+              createdAt: msg.createdAt.toISOString(),
             };
           }
 
+          const questData: any = quest;
           return {
             quest: {
-              _id: quest._id.toString(),
-              title: quest.title,
-              status: quest.status,
+              _id: questData._id.toString(),
+              title: questData.title,
+              status: questData.status,
               npcName:
-                typeof quest.npcId === "object"
-                  ? quest.npcId.displayName || quest.npcId.username
+                typeof questData.npcId === "object"
+                  ? questData.npcId.displayName || questData.npcId.username
                   : null,
             },
             messageCount,
@@ -295,22 +299,24 @@ export class ChatController {
           let lastMessage = null;
           if (messages[0]) {
             await messages[0].populate("senderId", "username displayName");
+            const msg: any = messages[0];
             lastMessage = {
-              _id: messages[0]._id.toString(),
-              content: messages[0].content,
-              senderId: messages[0].senderId,
-              createdAt: messages[0].createdAt.toISOString(),
+              _id: msg._id.toString(),
+              content: msg.content,
+              senderId: msg.senderId,
+              createdAt: msg.createdAt.toISOString(),
             };
           }
 
+          const questData: any = quest;
           return {
             quest: {
-              _id: quest._id.toString(),
-              title: quest.title,
-              status: quest.status,
+              _id: questData._id.toString(),
+              title: questData.title,
+              status: questData.status,
               adventurerName:
-                quest.adventurerId && typeof quest.adventurerId === "object"
-                  ? quest.adventurerId.displayName || quest.adventurerId.username
+                questData.adventurerId && typeof questData.adventurerId === "object"
+                  ? questData.adventurerId.displayName || questData.adventurerId.username
                   : null,
             },
             messageCount,

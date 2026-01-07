@@ -25,23 +25,18 @@ import AdventurerChats from "./pages/AdventurerChats";
 import NPCChats from "./pages/NPCChats";
 import CreateAdventurerProfile from "./pages/CreateAdventurerProfile";
 import CreateNPCProfile from "./pages/CreateNPCProfile";
-
-// Component to redirect to login or dashboard based on auth state
-function NavigateToLoginOrDashboard() {
-  const { token } = useAuth();
-  return <Navigate to={token ? "/dashboard" : "/login"} replace />;
-}
-
+import Onboarding from "./pages/Onboarding";
+import NPCOrganization from "./pages/NPCOrganization";
 
 const router = createBrowserRouter([
   // public routes
   { path: "/login", element: <Login /> },
   { path: "/register", element: <Register /> },
 
-  // root redirects to login (will redirect to dashboard if authenticated)
+  // Root should always start at login
   {
     path: "/",
-    element: <NavigateToLoginOrDashboard />,
+    element: <Navigate to="/login" replace />,
   },
   
   // protected dashboard
@@ -51,6 +46,14 @@ const router = createBrowserRouter([
       <ProfileProtected>
         <Dashboard />
       </ProfileProtected>
+    ),
+  },
+  {
+    path: "/onboarding",
+    element: (
+      <Protected roles={["ADVENTURER", "NPC"]}>
+        <Onboarding />
+      </Protected>
     ),
   },
   {
@@ -74,6 +77,14 @@ const router = createBrowserRouter([
     element: (
       <ProfileProtected roles={["NPC"]}>
         <NPCQuestBoard />
+      </ProfileProtected>
+    ),
+  },
+  {
+    path: "/npc/organization",
+    element: (
+      <ProfileProtected roles={["NPC"]}>
+        <NPCOrganization />
       </ProfileProtected>
     ),
   },

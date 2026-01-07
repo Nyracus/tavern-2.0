@@ -674,7 +674,7 @@ export const decideApplication = async (
         .json({ success: false, message: "Not authorized" });
     }
 
-    const application = quest.applications.id(applicationId as any);
+    const application = (quest.applications as any).id(applicationId);
     if (!application) {
       return res.status(404).json({
         success: false,
@@ -937,7 +937,7 @@ export const payQuest = async (
           severity: "MEDIUM",
           summary: "Quest payment was delayed beyond 24 hours.",
           details: `Quest ${quest.title} was paid on ${now.toISOString()}, more than 24h after completion.`,
-          questId: quest._id,
+          questId: quest._id as Types.ObjectId,
         });
       }
     }
@@ -945,6 +945,120 @@ export const payQuest = async (
     await quest.save();
 
     return res.json({ success: true, data: quest });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Adventurer cancels an accepted quest (50% gold penalty)
+export const cancelQuest = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    if (!req.userId) {
+      return res
+        .status(401)
+        .json({ success: false, message: "Unauthenticated" });
+    }
+
+    const { questId } = req.params;
+
+    const quest = await Quest.findById(questId).exec();
+    if (!quest) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Quest not found" });
+    }
+
+    // Verify the adventurer is the one who accepted this quest
+    if (!quest.adventurerId || quest.adventurerId.toString() !== req.userId) {
+      return res.status(403).json({
+        success: false,
+        message: "Only the assigned adventurer can cancel this quest.",
+      });
+    }
+
+    // Only allow cancellation of accepted quests
+    if (quest.status !== "Accepted") {
+      return res.status(400).json({
+        success: false,
+        message: "Only accepted quests can be cancelled.",
+      });
+    }
+
+    // Calculate 50% penalty
+    const rewardGold = quest.rewardGold || 0;
+    const penaltyAmount = Math.floor(rewardGold * 0.5);
+
+    // Get adventurer and deduct gold
+    const { UserModel } = await import("../models/user.model");
+    const adventurer = await UserModel.findById(req.userId).exec();
+    if (!adventurer) {
+      return res.status(404).json({
+        success: false,
+        message: "Adventurer not found",
+      });
+    }
+
+    const currentGold = adventurer.gold || 0;
+    
+    // Check if adventurer has enough gold (or allow negative balance)
+    // We'll allow negative balance but warn the user
+    const newGold = currentGold - penaltyAmount;
+    adventurer.gold = Math.max(0, newGold); // Don't allow negative gold, set to 0 if insufficient
+    await adventurer.save();
+
+    // Create transaction record for the penalty
+    const { transactionService } = await import("../services/transaction.service");
+    await transactionService.createTransaction(
+      String(quest._id),
+      "QUEST_CANCELLATION_PENALTY",
+      penaltyAmount,
+      String(req.userId), // fromUserId: adventurer
+      undefined, // toUserId: no one receives this gold
+      `Cancellation penalty for quest: ${quest.title} (50% of ${rewardGold} gold)`,
+      { originalReward: rewardGold, penaltyPercentage: 50 }
+    );
+
+    // Update quest status to Cancelled
+    quest.status = "Cancelled";
+    quest.adventurerId = undefined; // Remove adventurer assignment
+    await quest.save();
+
+    // Notify NPC about cancellation
+    const { notificationService } = await import("../services/notification.service");
+    if (quest.npcId) {
+      await notificationService.createNotification(
+        String(quest.npcId),
+        "QUEST_CANCELLED",
+        "Quest Cancelled",
+        `Adventurer ${adventurer.displayName || adventurer.username} cancelled quest "${quest.title}".`,
+        { questId: String(quest._id) }
+      );
+    }
+
+    // Create anomaly for quest cancellation
+    await createQuestAnomaly({
+      subjectUserId: new Types.ObjectId(req.userId),
+      subjectRole: "ADVENTURER",
+      type: "QUEST_CANCELLED_BY_ADVENTURER",
+      severity: "MEDIUM",
+      summary: `Adventurer ${adventurer.username} cancelled accepted quest "${quest.title}". Penalty: ${penaltyAmount} gold (50% of ${rewardGold} gold reward).`,
+      details: `Quest was cancelled after being accepted. ${penaltyAmount} gold was deducted from adventurer's account. Adventurer's gold balance: ${adventurer.gold}.`,
+      questId: quest._id as Types.ObjectId,
+    });
+
+    console.log(`[QUEST CANCELLATION] Adventurer ${req.userId} cancelled quest ${questId}. Penalty: ${penaltyAmount} gold. New balance: ${adventurer.gold}`);
+
+    return res.json({
+      success: true,
+      data: quest,
+      penalty: penaltyAmount,
+      newGoldBalance: adventurer.gold,
+      message: `Quest cancelled. ${penaltyAmount} gold (50% of reward) has been deducted from your account.`,
+    });
   } catch (err) {
     next(err);
   }
@@ -997,9 +1111,9 @@ export const rejectCompletion = async (
     if (quest.adventurerId) {
       await notificationService.createNotification(
         String(quest.adventurerId),
+        "QUEST_COMPLETION_REJECTED",
         "Quest Completion Rejected",
         `Your completion submission for "${quest.title}" was rejected. ${reason ? `Reason: ${reason}` : "You can resubmit or raise a conflict."}`,
-        "QUEST_APPLICATION_REJECTED",
         { questId: String(quest._id) }
       );
     }

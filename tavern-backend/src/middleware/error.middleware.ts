@@ -33,7 +33,8 @@ export const errorHandler = (
       ? err.message
       : 'Something went wrong, please try again later';
 
-  if (process.env.NODE_ENV !== 'production') {
+  // Only log errors in development (not in production or test environments)
+  if (process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'test') {
     console.error(err);
   }
 

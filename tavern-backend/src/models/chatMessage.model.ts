@@ -16,7 +16,7 @@ const ChatMessageSchema = new Schema<ChatMessageDocument>(
       type: Schema.Types.ObjectId,
       ref: "Quest",
       required: true,
-      index: true,
+      // Note: index is handled by compound index below (questId + createdAt)
     },
     senderId: {
       type: Schema.Types.ObjectId,

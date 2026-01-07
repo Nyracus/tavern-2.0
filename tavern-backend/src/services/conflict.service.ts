@@ -41,7 +41,7 @@ export class ConflictService {
     });
 
     // Update quest to reference conflict
-    quest.conflictId = conflict._id;
+    quest.conflictId = conflict._id as Types.ObjectId;
     quest.hasConflict = true;
     await quest.save();
 

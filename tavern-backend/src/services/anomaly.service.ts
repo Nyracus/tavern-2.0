@@ -67,12 +67,12 @@ export class AnomalyService {
     const now = new Date();
 
     // Find all accepted quests with deadlines that have passed
+    // Don't populate to avoid issues with deleted users in tests
     const overdueQuests = await Quest.find({
       status: "Accepted",
       deadline: { $exists: true, $lt: now },
-    })
-      .populate("adventurerId", "username displayName")
-      .exec();
+      adventurerId: { $exists: true, $ne: null }, // Only quests with an adventurer
+    }).exec();
 
     for (const quest of overdueQuests) {
       // Check if anomaly already exists for this quest
@@ -84,13 +84,13 @@ export class AnomalyService {
 
       if (!existingAnomaly && quest.adventurerId) {
         const doc = await AnomalyModel.create({
-          subjectUserId: quest.adventurerId._id as Types.ObjectId,
+          subjectUserId: quest.adventurerId as Types.ObjectId,
           subjectRole: "ADVENTURER",
           type: "QUEST_DEADLINE_PASSED",
           severity: "HIGH",
           summary: `Quest "${quest.title}" deadline has passed without completion.`,
           details: `Quest deadline was ${quest.deadline?.toISOString()}, but quest is still not completed.`,
-          questId: quest._id,
+          questId: quest._id as Types.ObjectId,
         });
         anomalies.push(doc);
       }

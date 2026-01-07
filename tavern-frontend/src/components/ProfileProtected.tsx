@@ -33,13 +33,10 @@ export default function ProfileProtected({ children, roles }: ProfileProtectedPr
   }
 
   // Redirect to profile creation if no profile exists
-  if (hasProfile === false) {
-    if (user?.role === "ADVENTURER") {
-      return <Navigate to="/create-adventurer-profile" replace />;
-    }
-    if (user?.role === "NPC") {
-      return <Navigate to="/create-npc-profile" replace />;
-    }
+  // IMPORTANT: Only NEW users (needsProfileSetup=true) are forced into onboarding.
+  // Existing users (flag missing/false) can access dashboard even if they never created a profile.
+  if (hasProfile === false && user?.needsProfileSetup) {
+    return <Navigate to="/onboarding" replace />;
   }
 
   return <>{children}</>;

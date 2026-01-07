@@ -1,0 +1,19 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+echo "🧪 Running unit tests before commit..."
+
+# Navigate to backend directory if not already there
+if [ -d "tavern-backend" ]; then
+  cd tavern-backend
+fi
+
+npm test
+
+if [ $? -ne 0 ]; then
+  echo "❌ Tests failed! Commit aborted."
+  exit 1
+fi
+
+echo "✅ All tests passed! Proceeding with commit..."
+

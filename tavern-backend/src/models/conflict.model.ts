@@ -58,8 +58,7 @@ const ConflictSchema = new Schema<ConflictDocument>(
   { timestamps: true }
 );
 
-// Indexes
-ConflictSchema.index({ questId: 1 });
+// Indexes (questId already indexed via unique: true above)
 ConflictSchema.index({ status: 1, createdAt: -1 });
 ConflictSchema.index({ raisedBy: 1 });
 

@@ -92,6 +92,10 @@ export class AdventurerProfileController {
         parsed
       );
 
+      // Mark onboarding complete for newly registered users
+      const { UserModel } = await import("../models/user.model");
+      await UserModel.findByIdAndUpdate(req.userId, { $set: { needsProfileSetup: false } }).exec();
+
       res.status(201).json({ success: true, data: profile });
     } catch (err) {
       next(err);

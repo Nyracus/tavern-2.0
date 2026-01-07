@@ -13,6 +13,7 @@ import {
   updateQuest,
   deleteQuest,
   getRecommendedQuests,
+  cancelQuest,
 } from "../controllers/quest.controller";
 import { enforceWorkloadLimit } from "../controllers/workload.controller";
 import { uploadQuestReport, uploadMiddleware } from "../controllers/storage.controller";
@@ -98,6 +99,12 @@ router.post(
   verifyToken,
   authorizeRole("ADVENTURER"),
   submitCompletion
+);
+router.post(
+  "/quests/:questId/cancel",
+  verifyToken,
+  authorizeRole("ADVENTURER"),
+  cancelQuest
 );
 
 // File upload endpoint for quest reports

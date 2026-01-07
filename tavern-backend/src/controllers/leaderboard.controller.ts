@@ -31,7 +31,7 @@ export const getAdventurerLeaderboard = async (
     );
 
     const items = profiles.map((p: any, index: number) => {
-      const user = userMap.get(p.userId);
+      const user: any = userMap.get(p.userId);
       return {
         position: index + 1,
         userId: p.userId,
