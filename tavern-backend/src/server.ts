@@ -15,8 +15,14 @@ const start = async () => {
   
   // Connect to Redis (non-blocking)
   try {
-    // Redis connects automatically with lazyConnect: false
-    // Just verify connection
+    // For lazy connect, explicitly connect only in production
+    // In dev, Redis will connect on first use
+    if (process.env.NODE_ENV === 'production') {
+      await redisClient.connect().catch(() => {
+        // Ignore connection errors in production startup
+      });
+    }
+    
     const available = await isRedisAvailable();
     if (available) {
       console.log(`✅ Redis connected (Instance: ${INSTANCE_ID})`);

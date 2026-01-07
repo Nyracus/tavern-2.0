@@ -19,7 +19,9 @@ export const createNpcOrganizationSchema = z.object({
   website: optionalUrl,
 });
 
-export const updateNpcOrganizationSelfSchema = createNpcOrganizationSchema.partial();
+export const updateNpcOrganizationSelfSchema = createNpcOrganizationSchema.partial().extend({
+  logoUrl: z.string().url().optional(),
+});
 
 export const updateNpcOrganizationAdminSchema = updateNpcOrganizationSelfSchema.extend({
   verified: z.boolean().optional(),
