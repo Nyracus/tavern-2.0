@@ -8,6 +8,7 @@ import {
   updateNpcOrganizationSelfSchema,
 } from '../schemas/npcOrganization.schema';
 import { npcOrganizationService } from '../services/npcOrganization.service';
+import { storageService } from '../services/storage.service';
 
 export class NpcOrganizationController {
   // NPC: GET /npc-organizations/me
@@ -98,6 +99,46 @@ export class NpcOrganizationController {
       const { id } = req.params;
       const parsed = updateNpcOrganizationAdminSchema.parse(req.body);
       const org = await npcOrganizationService.updateById(id, parsed as any);
+      res.json({ success: true, data: org });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  // NPC: POST /npc-organizations/me/logo
+  async uploadLogo(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      if (!req.userId) throw new AppError(401, 'Not authenticated');
+
+      const file = req.file;
+      if (!file) {
+        return res.status(400).json({
+          success: false,
+          message: 'No logo file uploaded',
+        });
+      }
+
+      // Get existing organization to delete old logo if exists
+      const existingOrg = await npcOrganizationService.getMyOrganization(req.userId);
+      if (existingOrg?.logoUrl) {
+        await storageService.deleteLogo(existingOrg.logoUrl).catch(() => {
+          // Ignore deletion errors
+        });
+      }
+
+      // Upload new logo
+      const logoUrl = await storageService.uploadLogo(
+        file.buffer,
+        req.userId,
+        'npc',
+        file.originalname
+      );
+
+      // Update organization with logo URL
+      const org = await npcOrganizationService.updateForNpc(req.userId, {
+        logoUrl,
+      });
+
       res.json({ success: true, data: org });
     } catch (err) {
       next(err);

@@ -38,6 +38,21 @@ class AuthController {
       next(err);
     }
   }
+
+  async verifyEmail(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      if (!req.userId) {
+        return res
+          .status(401)
+          .json({ success: false, message: "Unauthenticated" });
+      }
+
+      await authService.verifyEmail(req.userId);
+      return res.json({ success: true, message: "Email verified successfully" });
+    } catch (err) {
+      next(err);
+    }
+  }
 }
 
 export const authController = new AuthController();

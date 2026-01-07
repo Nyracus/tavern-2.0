@@ -206,10 +206,9 @@ export class ChatController {
           .json({ success: false, message: "Adventurer access required" });
       }
 
-      // Get all quests where this adventurer is assigned
+      // Get all quests where this adventurer is assigned (including all statuses for historical chats)
       const questsWithChats = await Quest.find({
         adventurerId: req.userId,
-        status: { $in: ["Accepted", "Completed", "Paid"] },
       })
         .populate("npcId", "username displayName")
         .sort({ updatedAt: -1 })

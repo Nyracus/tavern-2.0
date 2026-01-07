@@ -32,7 +32,7 @@ export default function CreateNPCProfile() {
 
     try {
       await api.post(
-        "/npcs/me/profile",
+        "/npcs/me",
         form,
         token
       );

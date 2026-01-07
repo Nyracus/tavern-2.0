@@ -1,18 +1,83 @@
 // src/pages/Dashboard.tsx
 import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
-import AdventurerProfileManager from "../components/AdventurerProfileManager";
 import { useWorkload } from "../hooks/useWorkload";
 import { NotificationDropdown } from "../components/NotificationDropdown";
 import QuestQuickView from "../components/QuestQuickView";
 import AdventurerStats from "../components/AdventurerStats";
+import { api } from "../lib/api";
+
+type AdventurerProfile = {
+  _id: string;
+  userId: string;
+  title: string;
+  summary: string;
+  class: string;
+  rank?: string;
+  xp?: number;
+  race?: string;
+  background?: string;
+  attributes: {
+    strength: number;
+    dexterity: number;
+    intelligence: number;
+    charisma: number;
+    vitality: number;
+    luck: number;
+  };
+  availableStatPoints?: number;
+  logoUrl?: string;
+};
 
 export default function Dashboard() {
-  const { user, logout } = useAuth();
+  const { user, logout, token } = useAuth();
   const { data: workload } = useWorkload();
+  const [adventurerProfile, setAdventurerProfile] = useState<AdventurerProfile | null>(null);
+  const [npcOrganization, setNpcOrganization] = useState<{ name: string; logoUrl?: string } | null>(null);
   const isGuildMaster = user?.role === "GUILD_MASTER";
   const isNPC = user?.role === "NPC";
   const isAdventurer = user?.role === "ADVENTURER";
+
+  useEffect(() => {
+    if (isAdventurer && token) {
+      loadProfile();
+    }
+    if (isNPC && token) {
+      loadNpcOrganization();
+    }
+  }, [isAdventurer, isNPC, token]);
+
+  const loadProfile = async () => {
+    if (!token) return;
+    try {
+      const res = await api.get<{ success: boolean; data: AdventurerProfile }>(
+        "/adventurers/me",
+        token
+      ).catch(() => ({ success: true, data: null }));
+      if (res.data) {
+        setAdventurerProfile(res.data);
+      }
+    } catch (err) {
+      console.error("Failed to load profile", err);
+    }
+  };
+
+  const loadNpcOrganization = async () => {
+    if (!token) return;
+    try {
+      const res = await api.get<{ success: boolean; data: { name: string; logoUrl?: string } }>(
+        "/npc-organizations/me",
+        token
+      ).catch(() => ({ success: true, data: null }));
+      if (res.data) {
+        setNpcOrganization(res.data);
+      }
+    } catch (err) {
+      // Organization might not exist yet
+      console.log("No organization found");
+    }
+  };
 
   return (
     <div className="min-h-screen bg-linear-to-b from-slate-900 via-slate-950 to-black text-slate-100">
@@ -78,12 +143,20 @@ export default function Dashboard() {
               </Link>
             )}
             {isAdventurer && (
-              <Link
-                to="/adventurer/quests"
-                className="text-xs md:text-sm px-3 py-2 rounded-lg border border-blue-500/60 text-blue-300 hover:bg-blue-500/10"
-              >
-                ⚔️ Quest Board
-              </Link>
+              <>
+                <Link
+                  to="/adventurer/quests"
+                  className="text-xs md:text-sm px-3 py-2 rounded-lg border border-blue-500/60 text-blue-300 hover:bg-blue-500/10"
+                >
+                  ⚔️ Quest Board
+                </Link>
+                <Link
+                  to="/adventurer/chats"
+                  className="text-xs md:text-sm px-3 py-2 rounded-lg border border-indigo-500/60 text-indigo-300 hover:bg-indigo-500/10"
+                >
+                  💬 Quest Chats
+                </Link>
+              </>
             )}
             <button
               className="btn bg-red-700 hover:bg-red-800 text-sm px-4 py-2"
@@ -112,13 +185,40 @@ export default function Dashboard() {
 
         {/* NPC-specific view */}
         {isNPC && (
-          <section className="rounded-2xl border border-purple-500/40 bg-slate-900/70 p-4 md:p-5 space-y-3">
-            <h2 className="text-lg font-semibold flex items-center gap-2">
-              🏛️ Employer Console
-            </h2>
-            <p className="text-sm text-slate-300">
-              Manage your quest postings, review applications, and oversee completed work.
-            </p>
+          <>
+            {/* NPC Organization Display */}
+            {npcOrganization && (
+              <section className="rounded-2xl border border-purple-500/40 bg-slate-900/70 p-4 md:p-5 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-lg font-semibold flex items-center gap-2">
+                    🏛️ {npcOrganization.name}
+                  </h2>
+                  {npcOrganization.logoUrl && (
+                    <div className="w-16 h-16 rounded-lg border-2 border-purple-600 bg-white overflow-hidden flex-shrink-0">
+                      <img
+                        src={npcOrganization.logoUrl}
+                        alt="Organization logo"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  )}
+                </div>
+                <Link
+                  to="/npc/organization"
+                  className="inline-block text-xs md:text-sm px-4 py-2 rounded-lg border border-purple-500/60 text-purple-300 hover:bg-purple-500/10"
+                >
+                  ✏️ Edit Organization
+                </Link>
+              </section>
+            )}
+            
+            <section className="rounded-2xl border border-purple-500/40 bg-slate-900/70 p-4 md:p-5 space-y-3">
+              <h2 className="text-lg font-semibold flex items-center gap-2">
+                🏛️ Employer Console
+              </h2>
+              <p className="text-sm text-slate-300">
+                Manage your quest postings, review applications, and oversee completed work.
+              </p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <Link
                 to="/npc/quests"
@@ -167,6 +267,7 @@ export default function Dashboard() {
               </Link>
             </div>
           </section>
+          </>
         )}
 
         {/* Adventurer-specific view */}
@@ -287,8 +388,85 @@ export default function Dashboard() {
               </Link>
             </section>
 
-            {/* Feature 1: Adventurer profile & skills */}
-            <AdventurerProfileManager />
+            {/* Adventurer Profile Section */}
+            <section className="rounded-2xl border border-purple-500/40 bg-slate-900/70 p-4 md:p-5 space-y-3">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold flex items-center gap-2">
+                  🧝 Adventurer Profile
+                </h2>
+                <Link
+                  to="/adventurer/profile"
+                  className="text-xs md:text-sm px-3 py-2 rounded-lg border border-purple-500/60 text-purple-300 hover:bg-purple-500/10"
+                >
+                  ✏️ Edit Profile
+                </Link>
+              </div>
+              {adventurerProfile && (
+                <>
+                  {/* Prompt for stat points */}
+                  {adventurerProfile.availableStatPoints && adventurerProfile.availableStatPoints > 0 && (
+                    <div className="rounded-lg border border-purple-500/60 bg-purple-900/40 px-4 py-3">
+                      <p className="text-sm text-purple-200 mb-2">
+                        ⭐ <strong>Rank Up Complete!</strong> You have {adventurerProfile.availableStatPoints} unallocated stat point{adventurerProfile.availableStatPoints !== 1 ? 's' : ''}!
+                      </p>
+                      <Link
+                        to="/adventurer/profile"
+                        className="inline-block text-xs md:text-sm px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-white transition-colors"
+                      >
+                        Distribute Stat Points →
+                      </Link>
+                    </div>
+                  )}
+                  
+                  {/* Profile Card */}
+                  <div className="rounded-xl border border-amber-700 bg-[#fdf3d0] text-slate-900 shadow-lg shadow-amber-900/30 p-5 space-y-2">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1">
+                        <h3 className="text-xl font-bold flex items-center gap-2">
+                          📜 {adventurerProfile.title}
+                        </h3>
+                      </div>
+                      {adventurerProfile.logoUrl && (
+                        <div className="w-16 h-16 rounded-lg border-2 border-amber-800 bg-white overflow-hidden flex-shrink-0">
+                          <img
+                            src={adventurerProfile.logoUrl}
+                            alt="Adventurer logo"
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      )}
+                    </div>
+                    <p>
+                      <b>Class:</b> {adventurerProfile.class} <span className="mx-2">|</span>{" "}
+                      <b>Rank:</b> <span className="font-semibold">{adventurerProfile.rank || "F"}</span>
+                    </p>
+                    {adventurerProfile.race && (
+                      <p>
+                        <b>Race:</b> {adventurerProfile.race}
+                      </p>
+                    )}
+                    {adventurerProfile.background && (
+                      <p>
+                        <b>Background:</b> {adventurerProfile.background}
+                      </p>
+                    )}
+                    {adventurerProfile.summary && (
+                      <p>
+                        <b>Summary:</b> {adventurerProfile.summary}
+                      </p>
+                    )}
+                    <div className="grid grid-cols-3 gap-2 mt-3 text-sm font-semibold">
+                      <p>STR: {adventurerProfile.attributes.strength}</p>
+                      <p>DEX: {adventurerProfile.attributes.dexterity}</p>
+                      <p>INT: {adventurerProfile.attributes.intelligence}</p>
+                      <p>CHA: {adventurerProfile.attributes.charisma}</p>
+                      <p>VIT: {adventurerProfile.attributes.vitality}</p>
+                      <p>LUCK: {adventurerProfile.attributes.luck}</p>
+                    </div>
+                  </div>
+                </>
+              )}
+            </section>
           </>
         )}
 

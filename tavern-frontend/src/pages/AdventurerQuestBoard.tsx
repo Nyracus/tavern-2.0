@@ -32,7 +32,6 @@ type Quest = {
 };
 
 type AdventurerProfile = {
-  level: number;
   xp?: number;
   rank?: string;
   class?: string;
@@ -250,7 +249,7 @@ export default function AdventurerQuestBoard() {
               Browse available quests and find your next adventure
               {profile && (
                 <span className="ml-2">
-                  | Level {profile.level} | Rank: <span className={getRankColor(profile.rank)}>{profile.rank || "F"}</span>
+                  | Rank: <span className={getRankColor(profile.rank)}>{profile.rank || "F"}</span>
                 </span>
               )}
             </p>
@@ -283,7 +282,7 @@ export default function AdventurerQuestBoard() {
             <input
               className="input bg-slate-800 flex-1"
               type="text"
-              placeholder="🔍 Search quests by title or description..."
+              placeholder="🔍 Search quests by title, description, or quest poster's name..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -451,8 +450,8 @@ export default function AdventurerQuestBoard() {
                         </span>
                       )}
                       {quest.recommendationScore !== undefined && (
-                        <span className="text-xs text-slate-400">
-                          Score: {Math.round(quest.recommendationScore * 100)}%
+                        <span className="text-xs text-emerald-400">
+                          Success Probability: {Math.round(quest.recommendationScore * 100)}%
                         </span>
                       )}
                     </div>

@@ -15,7 +15,7 @@ export const getAdventurerLeaderboard = async (
     ); // cap at 100
 
     const profiles = await AdventurerProfileModel.find()
-      .sort({ xp: -1, level: -1, createdAt: 1 })
+      .sort({ xp: -1, rank: 1, createdAt: 1 })
       .limit(limit)
       .lean<any>();
 
@@ -39,7 +39,6 @@ export const getAdventurerLeaderboard = async (
         displayName: user?.displayName || user?.username || "Unknown",
         title: p.title,
         class: p.class || "Unknown", // Use class from profile
-        level: p.level,
         xp: p.xp ?? 0,
         rank: p.rank ?? "F",
       };

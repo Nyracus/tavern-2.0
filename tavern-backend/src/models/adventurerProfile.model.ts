@@ -15,10 +15,10 @@ export interface IAdventurerProfile extends Document {
   title: string;  // e.g. "Dragon Slayer"
   summary: string;
   class: string;  // e.g. "Mage", "Warrior"
-  level: number;  // adventurer level
   xp?: number;    // Experience points
   rank?: string;  // Rank: F, E, D, C, B, A, S, SS, SSS
-  availableStatPoints?: number; // Unallocated stat points from level ups
+  availableStatPoints?: number; // Unallocated stat points from rank ups
+  logoUrl?: string; // Logo image URL from Supabase Storage
 
   race?: string;
   background?: string;
@@ -55,7 +55,6 @@ const AdventurerProfileSchema = new Schema<IAdventurerProfile>(
     title: { type: String, required: true },
     summary: { type: String, required: true },
     class: { type: String, required: true },
-    level: { type: Number, required: true, min: 1 },
     xp: { type: Number, default: 0, min: 0 },
     rank: {
       type: String,
@@ -63,17 +62,18 @@ const AdventurerProfileSchema = new Schema<IAdventurerProfile>(
       default: "F",
     },
     availableStatPoints: { type: Number, default: 0, min: 0 },
+    logoUrl: { type: String },
 
     race: { type: String },
     background: { type: String },
 
     attributes: {
-      strength: { type: Number, required: true, min: 1, max: 20 },
-      dexterity: { type: Number, required: true, min: 1, max: 20 },
-      intelligence: { type: Number, required: true, min: 1, max: 20 },
-      charisma: { type: Number, required: true, min: 1, max: 20 },
-      vitality: { type: Number, required: true, min: 1, max: 20 },
-      luck: { type: Number, required: true, min: 1, max: 20 },
+      strength: { type: Number, required: true, min: 10, max: 20 },
+      dexterity: { type: Number, required: true, min: 10, max: 20 },
+      intelligence: { type: Number, required: true, min: 10, max: 20 },
+      charisma: { type: Number, required: true, min: 10, max: 20 },
+      vitality: { type: Number, required: true, min: 10, max: 20 },
+      luck: { type: Number, required: true, min: 10, max: 20 },
     },
 
     skills: [SkillSchema],

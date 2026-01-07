@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { verifyToken, authorizeRole } from "../middleware/auth.middleware";
 import { adminController } from "../controllers/admin.controller";
+import { cacheController } from "../controllers/cache.controller";
 
 const router = Router();
 
@@ -20,6 +21,25 @@ router.delete(
   "/users/:id",
   ...adminGuard,
   adminController.deleteUser.bind(adminController)
+);
+
+// Cache management endpoints
+router.get(
+  "/cache/stats",
+  ...adminGuard,
+  cacheController.getCacheStats.bind(cacheController)
+);
+
+router.delete(
+  "/cache/clear",
+  ...adminGuard,
+  cacheController.clearCache.bind(cacheController)
+);
+
+router.delete(
+  "/cache/invalidate",
+  ...adminGuard,
+  cacheController.invalidateCache.bind(cacheController)
 );
 
 export default router;

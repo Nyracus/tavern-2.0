@@ -33,6 +33,7 @@ const NpcOrganizationSchema = new Schema<INpcOrganization>(
     description: { type: String },
     domain: { type: String },
     website: { type: String },
+    logoUrl: { type: String },
     verified: { type: Boolean, default: false },
 
     trustScore: { type: Number, required: true, min: 0, max: 100, default: 50 },
