@@ -4,8 +4,13 @@
 
 const express = require('express');
 const { createProxyMiddleware } = require('http-proxy-middleware');
+const cors = require('cors');
 
 const app = express();
+
+// Enable CORS for all routes (allow frontend to call API Gateway)
+app.use(cors());
+app.use(express.json());
 
 // Backend instances
 const backends = [
@@ -39,7 +44,10 @@ const proxyOptions = {
   changeOrigin: true,
   router: (req) => {
     // Round-robin routing
-    return getNextBackend();
+    const backend = getNextBackend();
+    // Render provides full URLs like https://service.onrender.com
+    // Backends have routes under /api, so proxy /api/* to backend/api/*
+    return backend;
   },
   on: {
     proxyReq: (proxyReq, req, res) => {
@@ -47,19 +55,26 @@ const proxyOptions = {
       proxyReq.setHeader('X-Forwarded-For', req.ip);
       proxyReq.setHeader('X-Forwarded-Proto', req.protocol);
       proxyReq.setHeader('X-Forwarded-Host', req.get('host'));
+      console.log(`[Gateway] Proxying ${req.method} ${req.path} to ${proxyReq.path}`);
+    },
+    proxyRes: (proxyRes, req, res) => {
+      console.log(`[Gateway] Response ${proxyRes.statusCode} for ${req.method} ${req.path}`);
     },
     error: (err, req, res) => {
-      console.error('Proxy error:', err.message);
+      console.error('[Gateway] Proxy error:', err.message);
+      console.error('[Gateway] Request path:', req.path);
+      console.error('[Gateway] Available backends:', backends);
       // Try next backend on error
       if (!res.headersSent) {
         res.status(502).json({
           success: false,
           message: 'Backend service unavailable',
+          error: err.message,
         });
       }
     },
   },
-  logLevel: 'warn',
+  logLevel: 'debug',
 };
 
 // API proxy
