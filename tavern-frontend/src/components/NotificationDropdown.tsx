@@ -54,7 +54,7 @@ export const NotificationDropdown: React.FC = () => {
     setIsOpen(false);
   };
 
-  const unreadNotifications = notifications.filter(n => !n.read);
+  // Removed unused unreadNotifications
   const displayNotifications = isOpen ? notifications.slice(0, 10) : [];
 
   return (

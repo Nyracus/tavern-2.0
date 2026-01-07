@@ -1,5 +1,4 @@
 // src/components/XPMeter.tsx
-import React from 'react';
 
 type XPMeterProps = {
   xp: number;
