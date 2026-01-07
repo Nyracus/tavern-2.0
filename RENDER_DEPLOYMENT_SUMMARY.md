@@ -42,7 +42,7 @@
 
 **All Backends:**
 - ✅ `MONGO_URI` - MongoDB Atlas connection string
-- ✅ `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD` - From Render Redis
+- ✅ `REDIS_CONNECTION_STRING` - From Render Redis (auto-linked)
 - ✅ `JWT_SECRET` - Same for all instances (auto-generated)
 - ✅ `FRONTEND_URL` - Set after frontend deploys
 - ⚠️ `PORT=10000` - Render requirement (already set)

@@ -32,21 +32,11 @@ services:
         value: backend-1
       - key: MONGO_URI
         sync: false  # Set manually in Render dashboard
-      - key: REDIS_HOST
+      - key: REDIS_CONNECTION_STRING
         fromService:
           type: redis
           name: tavern-redis
-          property: host
-      - key: REDIS_PORT
-        fromService:
-          type: redis
-          name: tavern-redis
-          property: port
-      - key: REDIS_PASSWORD
-        fromService:
-          type: redis
-          name: tavern-redis
-          property: password
+          property: connectionString
       - key: REDIS_DB
         value: 0
       - key: JWT_SECRET
@@ -73,7 +63,9 @@ services:
         sync: false  # Set to your frontend URL
     scaling:
       minInstances: 1
-      maxInstances: 1
+      maxInstances: 3
+      targetCPUPercent: 70
+      targetMemoryPercent: 80
 
   # Backend Instance 2
   - type: web
@@ -93,29 +85,15 @@ services:
         value: backend-2
       - key: MONGO_URI
         sync: false
-      - key: REDIS_HOST
+      - key: REDIS_CONNECTION_STRING
         fromService:
           type: redis
           name: tavern-redis
-          property: host
-      - key: REDIS_PORT
-        fromService:
-          type: redis
-          name: tavern-redis
-          property: port
-      - key: REDIS_PASSWORD
-        fromService:
-          type: redis
-          name: tavern-redis
-          property: password
+          property: connectionString
       - key: REDIS_DB
         value: 0
       - key: JWT_SECRET
-        fromService:
-          type: web
-          name: tavern-backend-1
-          property: envVar
-          value: JWT_SECRET
+        sync: false  # IMPORTANT: Copy value from tavern-backend-1 after it's created
       - key: JWT_EXPIRES_IN
         value: 7d
       - key: SUPABASE_URL
@@ -138,7 +116,9 @@ services:
         sync: false
     scaling:
       minInstances: 1
-      maxInstances: 1
+      maxInstances: 3
+      targetCPUPercent: 70
+      targetMemoryPercent: 80
 
   # Backend Instance 3
   - type: web
@@ -158,29 +138,15 @@ services:
         value: backend-3
       - key: MONGO_URI
         sync: false
-      - key: REDIS_HOST
+      - key: REDIS_CONNECTION_STRING
         fromService:
           type: redis
           name: tavern-redis
-          property: host
-      - key: REDIS_PORT
-        fromService:
-          type: redis
-          name: tavern-redis
-          property: port
-      - key: REDIS_PASSWORD
-        fromService:
-          type: redis
-          name: tavern-redis
-          property: password
+          property: connectionString
       - key: REDIS_DB
         value: 0
       - key: JWT_SECRET
-        fromService:
-          type: web
-          name: tavern-backend-1
-          property: envVar
-          value: JWT_SECRET
+        sync: false  # IMPORTANT: Copy value from tavern-backend-1 after it's created
       - key: JWT_EXPIRES_IN
         value: 7d
       - key: SUPABASE_URL
@@ -203,7 +169,9 @@ services:
         sync: false
     scaling:
       minInstances: 1
-      maxInstances: 1
+      maxInstances: 3
+      targetCPUPercent: 70
+      targetMemoryPercent: 80
 
   # API Gateway (Load Balancer)
   # This replaces Nginx for Render deployment
@@ -236,7 +204,9 @@ services:
         value: 10000
     scaling:
       minInstances: 1
-      maxInstances: 1
+      maxInstances: 2
+      targetCPUPercent: 70
+      targetMemoryPercent: 80
 
   # Frontend Static Site
   - type: web
@@ -246,11 +216,9 @@ services:
     staticPublishPath: ./tavern-frontend/dist
     envVars:
       - key: VITE_API_URL
-        fromService:
-          type: web
-          name: tavern-api-gateway
-          property: host
-          # Full URL format: https://tavern-api-gateway.onrender.com/api
+        # Note: Update manually after API gateway deploys
+        # Format: https://tavern-api-gateway.onrender.com/api
+        value: https://tavern-api-gateway.onrender.com/api
     routes:
       - type: rewrite
         source: /*
