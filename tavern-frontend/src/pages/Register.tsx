@@ -34,7 +34,13 @@ export default function Register() {
     setSuccess(null);
     try {
       await registerUser(form);
-      setSuccess("Your guild record has been inscribed. You may now return to the tavern gate and log in.");
+      // Redirect will be handled by ProfileProtected after login
+      // For now, just show success message
+      setSuccess("Your guild record has been inscribed. Redirecting to profile creation...");
+      // Small delay to show message, then redirect happens automatically via ProfileProtected
+      setTimeout(() => {
+        window.location.href = "/dashboard";
+      }, 1500);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Register failed";
       setError(msg);

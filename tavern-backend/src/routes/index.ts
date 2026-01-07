@@ -11,6 +11,7 @@ import notificationRoutes from "./notification.routes";
 import skillShopRoutes from "./skillShop.routes";
 import conflictRoutes from "./conflict.routes";
 import transactionRoutes from "./transaction.routes";
+import npcProfileRoutes from "./npcProfile.routes";
 
 
 const router = Router();
@@ -33,6 +34,7 @@ router.use("/", notificationRoutes);
 router.use("/", skillShopRoutes);
 router.use("/", conflictRoutes);
 router.use("/", transactionRoutes);
+router.use("/", npcProfileRoutes);
 
 
 export default router;

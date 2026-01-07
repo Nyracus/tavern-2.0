@@ -124,7 +124,16 @@ export const listQuests = async (
     }
 
     const quests = await query.exec();
-    return res.json({ success: true, data: quests });
+    // Transform quests to include npcName
+    const transformed = quests.map((quest: any) => {
+      const questObj = quest.toObject();
+      const npcName = questObj.npcId?.displayName || questObj.npcId?.username || "Unknown NPC";
+      return {
+        ...questObj,
+        npcName,
+      };
+    });
+    return res.json({ success: true, data: transformed });
   } catch (err) {
     next(err);
   }
@@ -219,10 +228,21 @@ export const listMyPostedQuests = async (
     const quests = await Quest.find({ npcId: req.userId })
       .populate("applications.adventurerId", "username displayName")
       .populate("adventurerId", "username displayName")
+      .populate("npcId", "username displayName")
       .sort({ createdAt: -1 })
       .exec();
 
-    return res.json({ success: true, data: quests });
+    // Transform to include npcName
+    const transformed = quests.map((quest: any) => {
+      const questObj = quest.toObject();
+      const npcName = questObj.npcId?.displayName || questObj.npcId?.username || "Unknown NPC";
+      return {
+        ...questObj,
+        npcName,
+      };
+    });
+
+    return res.json({ success: true, data: transformed });
   } catch (err) {
     next(err);
   }
@@ -257,8 +277,10 @@ export const updateQuest = async (
         .json({ success: false, message: "Not authorized" });
     }
 
-    // Allow editing Open quests normally
+    // Allow editing Open quests normally (no applicants = no anomaly)
     if (quest.status === "Open") {
+      const hasApplicants = quest.applications && quest.applications.length > 0;
+      
       if (title !== undefined) quest.title = title;
       if (description !== undefined) quest.description = description;
       if (difficulty !== undefined) quest.difficulty = difficulty;
@@ -266,6 +288,72 @@ export const updateQuest = async (
       if (deadline !== undefined) quest.deadline = deadline ? new Date(deadline) : undefined;
 
       await quest.save();
+
+      // If quest has applicants, create anomaly
+      if (hasApplicants) {
+        const changes: string[] = [];
+        if (title !== undefined) changes.push("title");
+        if (description !== undefined) changes.push("description");
+        if (difficulty !== undefined) changes.push("difficulty");
+        if (rewardGold !== undefined) changes.push("rewardGold");
+        if (deadline !== undefined) changes.push("deadline");
+
+        if (changes.length > 0) {
+          await createQuestAnomaly({
+            subjectUserId: quest.npcId as Types.ObjectId,
+            subjectRole: "NPC",
+            type: "QUEST_EDITED_WITH_APPLICANTS",
+            severity: "HIGH",
+            summary: `NPC edited quest "${quest.title}" while it has ${quest.applications.length} applicant(s). Changed fields: ${changes.join(", ")}.`,
+            details: `Quest ID: ${quest._id}. Changes: ${changes.join(", ")}. This may affect applicants who have already applied.`,
+            questId: quest._id as Types.ObjectId,
+          });
+        }
+      }
+
+      return res.json({ success: true, data: quest });
+    }
+
+    // Allow editing Applied quests (has applicants = trigger anomaly)
+    if (quest.status === "Applied") {
+      const changes: string[] = [];
+      
+      if (title !== undefined) {
+        quest.title = title;
+        changes.push("title");
+      }
+      if (description !== undefined) {
+        quest.description = description;
+        changes.push("description");
+      }
+      if (difficulty !== undefined) {
+        quest.difficulty = difficulty;
+        changes.push("difficulty");
+      }
+      if (rewardGold !== undefined) {
+        quest.rewardGold = rewardGold;
+        changes.push("rewardGold");
+      }
+      if (deadline !== undefined) {
+        quest.deadline = deadline ? new Date(deadline) : undefined;
+        changes.push("deadline");
+      }
+
+      await quest.save();
+
+      // Always create anomaly for Applied quests (they have applicants)
+      if (changes.length > 0) {
+        await createQuestAnomaly({
+          subjectUserId: quest.npcId as Types.ObjectId,
+          subjectRole: "NPC",
+          type: "QUEST_EDITED_WITH_APPLICANTS",
+          severity: "HIGH",
+          summary: `NPC edited quest "${quest.title}" while it has ${quest.applications.length} applicant(s). Changed fields: ${changes.join(", ")}.`,
+          details: `Quest ID: ${quest._id}. Changes: ${changes.join(", ")}. This may affect applicants who have already applied.`,
+          questId: quest._id as Types.ObjectId,
+        });
+      }
+
       return res.json({ success: true, data: quest });
     }
 
@@ -304,7 +392,7 @@ export const updateQuest = async (
 
     return res.status(400).json({
       success: false,
-      message: "Can only edit quests with status 'Open' or 'Accepted'",
+      message: "Can only edit quests with status 'Open', 'Applied', or 'Accepted'",
     });
   } catch (err) {
     next(err);
@@ -407,11 +495,16 @@ export const getRecommendedQuests = async (
       
       return res.json({
         success: true,
-        data: easyQuests.map((q: any) => ({
-          ...q.toObject(),
-          recommendationRank: "F",
-          recommendationScore: 0.5,
-        })),
+        data: easyQuests.map((q: any) => {
+          const questObj = q.toObject();
+          const npcName = questObj.npcId?.displayName || questObj.npcId?.username || "Unknown NPC";
+          return {
+            ...questObj,
+            npcName,
+            recommendationRank: "F",
+            recommendationScore: 0.5,
+          };
+        }),
       });
     }
 
@@ -524,8 +617,10 @@ export const getRecommendedQuests = async (
         score += goldBonus;
       }
 
+      const npcName = questObj.npcId?.displayName || questObj.npcId?.username || "Unknown NPC";
       return {
         ...questObj,
+        npcName,
         recommendationScore: Math.min(score, 1.0),
         recommendationRank: matchRank,
         recommendedForClass: preferredCategories.length > 0 && preferredCategories.some(cat => 

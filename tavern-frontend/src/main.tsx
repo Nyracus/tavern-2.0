@@ -8,6 +8,7 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import Protected from "./components/Protected";
+import ProfileProtected from "./components/ProfileProtected";
 import AdventurerLeaderboard from "./pages/AdventurerLeaderboard";
 import AdminAnomalies from "./pages/AdminAnomalies";
 import NPCQuestBoard from "./pages/NPCQuestBoard";
@@ -22,6 +23,8 @@ import AdminUsers from "./pages/AdminUsers";
 import SkillsShopPage from "./pages/SkillsShopPage";
 import AdventurerChats from "./pages/AdventurerChats";
 import NPCChats from "./pages/NPCChats";
+import CreateAdventurerProfile from "./pages/CreateAdventurerProfile";
+import CreateNPCProfile from "./pages/CreateNPCProfile";
 
 // Component to redirect to login or dashboard based on auth state
 function NavigateToLoginOrDashboard() {
@@ -45,9 +48,9 @@ const router = createBrowserRouter([
   {
     path: "/dashboard",
     element: (
-      <Protected>
+      <ProfileProtected>
         <Dashboard />
-      </Protected>
+      </ProfileProtected>
     ),
   },
   {
@@ -69,41 +72,41 @@ const router = createBrowserRouter([
   {
     path: "/npc/quests",
     element: (
-      <Protected roles={["NPC"]}>
+      <ProfileProtected roles={["NPC"]}>
         <NPCQuestBoard />
-      </Protected>
+      </ProfileProtected>
     ),
   },
   {
     path: "/npc/applications",
     element: (
-      <Protected roles={["NPC"]}>
+      <ProfileProtected roles={["NPC"]}>
         <NPCApplications />
-      </Protected>
+      </ProfileProtected>
     ),
   },
   {
     path: "/npc/completions",
     element: (
-      <Protected roles={["NPC"]}>
+      <ProfileProtected roles={["NPC"]}>
         <NPCCompletions />
-      </Protected>
+      </ProfileProtected>
     ),
   },
   {
     path: "/adventurer/quests",
     element: (
-      <Protected roles={["ADVENTURER"]}>
+      <ProfileProtected roles={["ADVENTURER"]}>
         <AdventurerQuestBoard />
-      </Protected>
+      </ProfileProtected>
     ),
   },
   {
     path: "/adventurer/applications",
     element: (
-      <Protected roles={["ADVENTURER"]}>
+      <ProfileProtected roles={["ADVENTURER"]}>
         <AdventurerApplications />
-      </Protected>
+      </ProfileProtected>
     ),
   },
   {
@@ -141,24 +144,40 @@ const router = createBrowserRouter([
   {
     path: "/skills/shop",
     element: (
-      <Protected roles={["ADVENTURER"]}>
+      <ProfileProtected roles={["ADVENTURER"]}>
         <SkillsShopPage />
-      </Protected>
+      </ProfileProtected>
     ),
   },
   {
     path: "/adventurer/chats",
     element: (
-      <Protected roles={["ADVENTURER"]}>
+      <ProfileProtected roles={["ADVENTURER"]}>
         <AdventurerChats />
-      </Protected>
+      </ProfileProtected>
     ),
   },
   {
     path: "/npc/chats",
     element: (
-      <Protected roles={["NPC"]}>
+      <ProfileProtected roles={["NPC"]}>
         <NPCChats />
+      </ProfileProtected>
+    ),
+  },
+  {
+    path: "/create-adventurer-profile",
+    element: (
+      <Protected roles={["ADVENTURER"]}>
+        <CreateAdventurerProfile />
+      </Protected>
+    ),
+  },
+  {
+    path: "/create-npc-profile",
+    element: (
+      <Protected roles={["NPC"]}>
+        <CreateNPCProfile />
       </Protected>
     ),
   },

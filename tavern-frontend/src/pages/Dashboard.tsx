@@ -100,9 +100,6 @@ export default function Dashboard() {
             📜 Guild Record
           </h2>
           <p>
-            <b>ID:</b> {user?.id}
-          </p>
-          <p>
             <b>Name:</b> {user?.displayName}
           </p>
           <p>
@@ -110,9 +107,6 @@ export default function Dashboard() {
           </p>
           <p>
             <b>Username:</b> {user?.username}
-          </p>
-          <p>
-            <b>Email:</b> {user?.email}
           </p>
         </section>
 

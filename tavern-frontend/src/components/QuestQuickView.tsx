@@ -35,8 +35,18 @@ export default function QuestQuickView() {
         "/quests/recommended",
         token
       ).catch(() => ({ success: true, data: [] }));
+      
+      // Transform quests to extract NPC names from populated npcId
+      const transformed = (res.data || []).map((quest: any) => {
+        const npcName = quest.npcId?.displayName || quest.npcId?.username || "Unknown NPC";
+        return {
+          ...quest,
+          npcName,
+        };
+      });
+      
       // Limit to 3 for quick view
-      const limited = (res.data || []).slice(0, 3);
+      const limited = transformed.slice(0, 3);
       setQuests(limited);
     } catch (err) {
       console.error("Failed to load recommended quests", err);

@@ -112,13 +112,33 @@ export default function AdventurerQuestBoard() {
           "/quests/recommended",
           token
         ).catch(() => ({ success: true, data: [] }));
-        setRecommendedQuests(recommendedRes.data || []);
+        
+        // Transform recommended quests too
+        const transformedRecommended = (recommendedRes.data || []).map((quest: any) => {
+          const npcName = quest.npcId?.displayName || quest.npcId?.username || "Unknown NPC";
+          return {
+            ...quest,
+            npcId: typeof quest.npcId === "object" ? quest.npcId._id || quest.npcId : quest.npcId,
+            npcName,
+          };
+        });
+        setRecommendedQuests(transformedRecommended);
       } else {
         setRecommendedQuests([]);
       }
 
+      // Transform quests to extract NPC names from populated npcId
+      const transformedQuests = res.data.map((quest: any) => {
+        const npcName = quest.npcId?.displayName || quest.npcId?.username || "Unknown NPC";
+        return {
+          ...quest,
+          npcId: typeof quest.npcId === "object" ? quest.npcId._id || quest.npcId : quest.npcId,
+          npcName,
+        };
+      });
+
       // Apply class filter if selected
-      let filteredQuests = res.data;
+      let filteredQuests = transformedQuests;
       if (classFilter) {
         const classKeywords: Record<string, string[]> = {
           "archer": ["archer", "ranger", "ranged", "bow", "arrow", "scout", "hunt", "track"],

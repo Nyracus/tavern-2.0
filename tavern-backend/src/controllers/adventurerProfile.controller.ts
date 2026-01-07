@@ -10,6 +10,8 @@ import { adventurerProfileService } from "../services/adventurerProfile.service"
 import { AppError } from "../middleware/error.middleware";
 import { AuthRequest } from "../middleware/auth.middleware";
 import { AdventurerProfileModel } from "../models/adventurerProfile.model";
+import { AnomalyModel } from "../models/anomaly.model";
+import { Types } from "mongoose";
 
 // Helper: compute rank from xp
 const calculateRank = (xp: number): string => {
@@ -103,10 +105,66 @@ export class AdventurerProfileController {
       }
 
       const parsed = updateAdventurerProfileSchema.parse(req.body);
+      
+      // Get old profile to detect changes
+      const oldProfile = await adventurerProfileService.getMyProfile(req.userId);
+      
       const profile = await adventurerProfileService.updateProfileForUser(
         req.userId,
         parsed
       );
+
+      // Create anomaly if profile was edited
+      if (oldProfile) {
+        const changes: string[] = [];
+        if (parsed.title !== undefined && parsed.title !== oldProfile.title) {
+          changes.push("title");
+        }
+        if (parsed.summary !== undefined && parsed.summary !== oldProfile.summary) {
+          changes.push("summary");
+        }
+        if (parsed.race !== undefined && parsed.race !== oldProfile.race) {
+          changes.push("race");
+        }
+        if (parsed.background !== undefined && parsed.background !== oldProfile.background) {
+          changes.push("background");
+        }
+        if (parsed.attributes !== undefined) {
+          const attrChanges: string[] = [];
+          if (parsed.attributes.strength !== undefined && parsed.attributes.strength !== oldProfile.attributes.strength) {
+            attrChanges.push("strength");
+          }
+          if (parsed.attributes.dexterity !== undefined && parsed.attributes.dexterity !== oldProfile.attributes.dexterity) {
+            attrChanges.push("dexterity");
+          }
+          if (parsed.attributes.intelligence !== undefined && parsed.attributes.intelligence !== oldProfile.attributes.intelligence) {
+            attrChanges.push("intelligence");
+          }
+          if (parsed.attributes.charisma !== undefined && parsed.attributes.charisma !== oldProfile.attributes.charisma) {
+            attrChanges.push("charisma");
+          }
+          if (parsed.attributes.vitality !== undefined && parsed.attributes.vitality !== oldProfile.attributes.vitality) {
+            attrChanges.push("vitality");
+          }
+          if (parsed.attributes.luck !== undefined && parsed.attributes.luck !== oldProfile.attributes.luck) {
+            attrChanges.push("luck");
+          }
+          if (attrChanges.length > 0) {
+            changes.push(`attributes (${attrChanges.join(", ")})`);
+          }
+        }
+
+        if (changes.length > 0) {
+          await AnomalyModel.create({
+            subjectUserId: new Types.ObjectId(req.userId),
+            subjectRole: "ADVENTURER",
+            type: "PROFILE_EDITED",
+            severity: "MEDIUM",
+            summary: `Adventurer ${req.userId} edited their profile. Changed fields: ${changes.join(", ")}.`,
+            details: `Profile changes detected: ${changes.join(", ")}. Original values may have been modified.`,
+          });
+        }
+      }
 
       res.json({ success: true, data: profile });
     } catch (err) {
