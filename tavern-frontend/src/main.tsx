@@ -10,6 +10,7 @@ import Dashboard from "./pages/Dashboard";
 import Protected from "./components/Protected";
 import AdventurerLeaderboard from "./pages/AdventurerLeaderboard";
 import AdminAnomalies from "./pages/AdminAnomalies";
+import AdminEscrows from "./pages/AdminEscrows";
 import NPCQuestBoard from "./pages/NPCQuestBoard";
 import NPCApplications from "./pages/NPCApplications";
 import NPCCompletions from "./pages/NPCCompletions";
@@ -45,6 +46,14 @@ const router = createBrowserRouter([
     element: (
       <Protected roles={["GUILD_MASTER"]}>
         <AdminAnomalies />
+      </Protected>
+    ),
+  },
+  {
+    path: "/admin/escrows",
+    element: (
+      <Protected roles={["GUILD_MASTER"]}>
+        <AdminEscrows />
       </Protected>
     ),
   },

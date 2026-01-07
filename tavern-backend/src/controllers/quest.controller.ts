@@ -42,6 +42,7 @@ export const createQuest = async (
 
     const { title, description, difficulty, rewardGold, deadline } = req.body;
 
+    // Create the quest first
     const quest = await Quest.create({
       title,
       description,
@@ -52,11 +53,31 @@ export const createQuest = async (
       status: "Open",
     });
 
+    // Create escrow if reward is specified
+    if (rewardGold && rewardGold > 0) {
+      try {
+        const { escrowService } = await import("../services/escrow.service");
+        await escrowService.createEscrow(
+          quest._id,
+          req.userId,
+          rewardGold
+        );
+      } catch (escrowError: any) {
+        // If escrow creation fails, delete the quest and throw error
+        await Quest.findByIdAndDelete(quest._id);
+        return res.status(400).json({
+          success: false,
+          message: escrowError.message || "Failed to create escrow",
+        });
+      }
+    }
+
     return res.status(201).json({ success: true, data: quest });
   } catch (err) {
     next(err);
   }
 };
+
 
 // Adventurer / NPC browse quests with search and filtering
 export const listQuests = async (
@@ -312,6 +333,17 @@ export const deleteQuest = async (
       });
     }
 
+    // Refund escrow if it exists
+    try {
+      const { escrowService } = await import("../services/escrow.service");
+      await escrowService.refundEscrow(questId, "Quest deleted by NPC");
+    } catch (escrowError: any) {
+      // If no escrow exists, that's okay (backward compatibility)
+      if (!escrowError.message?.includes("Escrow not found")) {
+        console.error("Failed to refund escrow:", escrowError);
+      }
+    }
+
     await Quest.findByIdAndDelete(questId).exec();
 
     return res.status(204).send();
@@ -540,6 +572,18 @@ export const decideApplication = async (
 
     await quest.save();
 
+    // Update escrow with adventurer ID
+    try {
+      const { escrowService } = await import("../services/escrow.service");
+      await escrowService.updateEscrowAdventurer(
+        String(quest._id),
+        String(application.adventurerId)
+      );
+    } catch (escrowError) {
+      // Log error but don't fail the acceptance
+      console.error("Failed to update escrow:", escrowError);
+    }
+
     // Notify adventurer about decision
     const { notificationService } = await import("../services/notification.service");
     if (decision === "ACCEPT") {
@@ -685,13 +729,23 @@ export const payQuest = async (
     quest.paidAt = now;
     quest.paidGold = paymentAmount;
 
-    // Award gold to adventurer
+    // Release escrow funds to adventurer
     if (quest.adventurerId) {
-      const { UserModel } = await import("../models/user.model");
-      const adventurer = await UserModel.findById(quest.adventurerId).exec();
-      if (adventurer) {
-        adventurer.gold = (adventurer.gold || 0) + paymentAmount;
-        await adventurer.save();
+      try {
+        const { escrowService } = await import("../services/escrow.service");
+        await escrowService.releaseEscrow(String(quest._id), paymentAmount);
+      } catch (escrowError: any) {
+        // If no escrow exists, fall back to direct payment (for backward compatibility)
+        if (escrowError.message?.includes("Escrow not found")) {
+          const { UserModel } = await import("../models/user.model");
+          const adventurer = await UserModel.findById(quest.adventurerId).exec();
+          if (adventurer) {
+            adventurer.gold = (adventurer.gold || 0) + paymentAmount;
+            await adventurer.save();
+          }
+        } else {
+          throw escrowError;
+        }
       }
     }
 

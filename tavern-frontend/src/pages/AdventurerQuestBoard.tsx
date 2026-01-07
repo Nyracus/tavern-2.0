@@ -41,9 +41,10 @@ export default function AdventurerQuestBoard() {
   const { token, user } = useAuth();
   const [quests, setQuests] = useState<Quest[]>([]);
   const [recommendedQuests, setRecommendedQuests] = useState<Quest[]>([]);
+  const [myQuests, setMyQuests] = useState<Quest[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [filter, setFilter] = useState<"all" | "recommended" | "open">("recommended");
+  const [filter, setFilter] = useState<"all" | "recommended" | "open" | "mine">("mine");
   const [selectedQuest, setSelectedQuest] = useState<Quest | null>(null);
   const [applyNote, setApplyNote] = useState("");
   const [showApplyForm, setShowApplyForm] = useState(false);
@@ -114,6 +115,13 @@ export default function AdventurerQuestBoard() {
         setRecommendedQuests([]);
       }
 
+      // Load adventurer's active/pending quests (quests they've applied to)
+      const myQuestsRes = await api.get<{ success: boolean; data: Quest[] }>(
+        "/quests/applications/mine",
+        token
+      ).catch(() => ({ success: true, data: [] }));
+      setMyQuests(myQuestsRes.data || []);
+
       setQuests(res.data);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to load quests");
@@ -182,11 +190,24 @@ export default function AdventurerQuestBoard() {
     );
   };
 
+  const getMyApplication = (quest: Quest) => {
+    if (!user) return null;
+    return quest.applications?.find((app) => app.adventurerId === user.id);
+  };
+
+  const isMyActiveQuest = (quest: Quest) => {
+    return quest.adventurerId === user?.id && 
+           (quest.status === "Accepted" || quest.status === "Completed");
+  };
+
   if (!user || user.role !== "ADVENTURER") {
     return <div className="min-h-screen bg-slate-900 text-slate-100 p-8">Access denied. Adventurer only.</div>;
   }
 
-  const displayQuests = filter === "recommended" ? recommendedQuests : quests.filter(q => filter === "open" ? q.status === "Open" : true);
+  const displayQuests = 
+    filter === "recommended" ? recommendedQuests :
+    filter === "mine" ? myQuests :
+    quests.filter(q => filter === "open" ? q.status === "Open" : true);
 
   return (
     <div className="min-h-screen bg-linear-to-b from-slate-900 via-slate-950 to-black text-slate-100">
@@ -319,6 +340,18 @@ export default function AdventurerQuestBoard() {
         <div className="flex items-center gap-2 border-b border-slate-700">
           <button
             onClick={() => {
+              setFilter("mine");
+            }}
+            className={`px-4 py-2 text-sm font-semibold border-b-2 ${
+              filter === "mine"
+                ? "border-emerald-500 text-emerald-300"
+                : "border-transparent text-slate-400 hover:text-slate-200"
+            }`}
+          >
+            ⚔️ My Quests ({myQuests.length})
+          </button>
+          <button
+            onClick={() => {
               setFilter("recommended");
               setSearchQuery("");
               setDifficultyFilter([]);
@@ -363,18 +396,47 @@ export default function AdventurerQuestBoard() {
           </div>
         ) : (
           <div className="space-y-4">
-            {displayQuests.map((quest) => (
+            {displayQuests.map((quest) => {
+              const myApp = getMyApplication(quest);
+              const isActive = isMyActiveQuest(quest);
+
+              return (
               <div
                 key={quest._id}
-                className="rounded-2xl border border-blue-500/40 bg-slate-900/70 p-5 space-y-3"
+                className={`rounded-2xl border p-5 space-y-3 ${
+                  isActive 
+                    ? "border-emerald-500/60 bg-emerald-900/10" 
+                    : "border-blue-500/40 bg-slate-900/70"
+                }`}
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
+                    <div className="flex items-center gap-3 mb-2 flex-wrap">
                       <h3 className="text-xl font-semibold">{quest.title}</h3>
                       <span className={`text-sm font-medium ${getDifficultyColor(quest.difficulty)}`}>
                         {quest.difficulty}
                       </span>
+                      {/* Quest Status Badge */}
+                      {quest.status !== "Open" && (
+                        <span className={`text-xs font-medium px-2 py-1 rounded ${
+                          quest.status === "Accepted" ? "bg-emerald-600/80 text-emerald-100" :
+                          quest.status === "Completed" ? "bg-purple-600/80 text-purple-100" :
+                          quest.status === "Paid" ? "bg-blue-600/80 text-blue-100" :
+                          "bg-slate-600/80 text-slate-100"
+                        }`}>
+                          {quest.status}
+                        </span>
+                      )}
+                      {/* Application Status Badge */}
+                      {myApp && (
+                        <span className={`text-xs font-medium px-2 py-1 rounded ${
+                          myApp.status === "PENDING" ? "bg-yellow-600/80 text-yellow-100" :
+                          myApp.status === "ACCEPTED" ? "bg-green-600/80 text-green-100" :
+                          "bg-red-600/80 text-red-100"
+                        }`}>
+                          App: {myApp.status}
+                        </span>
+                      )}
                       {quest.recommendationRank && (
                         <span className={`text-xs font-bold px-2 py-1 rounded ${getRankColor(quest.recommendationRank)} bg-slate-800`}>
                           Match: {quest.recommendationRank}
@@ -387,20 +449,27 @@ export default function AdventurerQuestBoard() {
                       )}
                     </div>
                     <p className="text-slate-300 mb-3">{quest.description}</p>
-                    <div className="flex items-center gap-4 text-sm text-slate-400">
+                    <div className="flex items-center gap-4 text-sm text-slate-400 flex-wrap">
                       <span>💰 {quest.rewardGold || 0} gold</span>
                       {quest.deadline && (
-                        <span>⏰ {new Date(quest.deadline).toLocaleString()}</span>
+                        <span className={new Date() > new Date(quest.deadline) ? "text-red-400" : ""}>
+                          ⏰ {new Date(quest.deadline).toLocaleString()}
+                          {isActive && new Date() > new Date(quest.deadline) && " ⚠️"}
+                        </span>
                       )}
                       <span>👤 {quest.npcName || "NPC"}</span>
-                      {quest.applications && quest.applications.length > 0 && (
+                      {quest.applications && quest.applications.length > 0 && quest.status === "Open" && (
                         <span>📋 {quest.applications.length} application(s)</span>
+                      )}
+                      {myApp && myApp.createdAt && (
+                        <span>📅 Applied: {new Date(myApp.createdAt).toLocaleDateString()}</span>
                       )}
                     </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  {quest.status === "Open" && !hasApplied(quest) && (
+                <div className="flex items-center gap-2 flex-wrap">
+                  {/* Apply button for open quests */}
+                  {quest.status === "Open" && !myApp && (
                     <button
                       onClick={() => {
                         setSelectedQuest(quest);
@@ -411,19 +480,49 @@ export default function AdventurerQuestBoard() {
                       ✍️ Apply
                     </button>
                   )}
-                  {hasApplied(quest) && (
+                  {/* Application pending indicator */}
+                  {myApp?.status === "PENDING" && quest.status === "Open" && (
                     <span className="text-sm text-yellow-400 px-4 py-2 border border-yellow-500/40 rounded-lg">
                       ⏳ Application Pending
                     </span>
                   )}
-                  {(quest.status === "Accepted" || quest.status === "Completed") && quest.adventurerId === user.id && (
+                  {/* Application rejected indicator */}
+                  {myApp?.status === "REJECTED" && (
+                    <span className="text-sm text-red-400 px-4 py-2 border border-red-500/40 rounded-lg">
+                      ❌ Application Rejected
+                    </span>
+                  )}
+                  {/* Chat button for accepted quests */}
+                  {isActive && (
                     <button
                       onClick={() => setChatQuest(quest)}
                       className="btn bg-indigo-600 hover:bg-indigo-700 text-sm px-4 py-2"
                     >
-                      💬 Chat
+                      💬 Chat with NPC
                     </button>
                   )}
+                  {/* Link to applications page for managing quest */}
+                  {isActive && (
+                    <Link
+                      to="/adventurer/applications"
+                      className="btn bg-emerald-600 hover:bg-emerald-700 text-sm px-4 py-2"
+                    >
+                      ⚔️ Manage Quest
+                    </Link>
+                  )}
+                  {/* Quest completed - awaiting payment */}
+                  {quest.status === "Completed" && quest.adventurerId === user.id && (
+                    <span className="text-sm text-purple-400 px-4 py-2 border border-purple-500/40 rounded-lg">
+                      ⏳ Awaiting Payment
+                    </span>
+                  )}
+                  {/* Quest paid */}
+                  {quest.status === "Paid" && quest.adventurerId === user.id && (
+                    <span className="text-sm text-blue-400 px-4 py-2 border border-blue-500/40 rounded-lg">
+                      ✅ Quest Complete & Paid
+                    </span>
+                  )}
+                  {/* View details button */}
                   <button
                     onClick={() => setSelectedQuest(quest)}
                     className="btn bg-slate-600 hover:bg-slate-700 text-sm px-4 py-2"
@@ -432,7 +531,8 @@ export default function AdventurerQuestBoard() {
                   </button>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
 

@@ -185,6 +185,9 @@ export default function AdventurerApplications() {
                           Application: {myApp.status}
                         </span>
                       </div>
+                      {(quest.status === "Accepted" || quest.status === "Completed" || quest.status === "Paid") && (
+                        <p className="text-xs text-slate-500 font-mono mb-2">Quest ID: {quest._id}</p>
+                      )}
                       <p className="text-slate-300 mb-3">{quest.description}</p>
                       <div className="text-sm text-slate-400 space-y-1">
                         <p>
@@ -316,11 +319,23 @@ export default function AdventurerApplications() {
         )}
 
         {chatQuest && (
-          <QuestChat
-            questId={chatQuest._id}
-            questTitle={chatQuest.title}
-            onClose={() => setChatQuest(null)}
-          />
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-slate-900 rounded-2xl border border-sky-500/40 w-full max-w-3xl mx-4 overflow-hidden">
+              <div className="flex items-center justify-between p-4 border-b border-sky-500/30">
+                <h3 className="text-lg font-semibold">Quest Chat</h3>
+                <button
+                  onClick={() => setChatQuest(null)}
+                  className="text-slate-400 hover:text-white"
+                >
+                  ✕
+                </button>
+              </div>
+              <QuestChat
+                questId={chatQuest._id}
+                questTitle={chatQuest.title}
+              />
+            </div>
+          </div>
         )}
       </div>
     </div>

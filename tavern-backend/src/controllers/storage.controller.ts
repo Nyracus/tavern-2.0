@@ -2,22 +2,39 @@
 import { Response, NextFunction } from 'express';
 import { AuthRequest } from '../middleware/auth.middleware';
 import { storageService } from '../services/storage.service';
-import multer from 'multer';
 
-// Configure multer for file upload (memory storage)
-const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: {
-    fileSize: 10 * 1024 * 1024, // 10MB limit
-  },
-  fileFilter: (req, file, cb) => {
-    if (file.mimetype === 'application/pdf') {
-      cb(null, true);
-    } else {
-      cb(new Error('Only PDF files are allowed'));
-    }
-  },
-});
+// Try to import multer - if not installed, file uploads will be disabled
+let multer: any;
+let upload: any;
+
+try {
+  multer = require('multer');
+  // Configure multer for file upload (memory storage)
+  upload = multer({
+    storage: multer.memoryStorage(),
+    limits: {
+      fileSize: 10 * 1024 * 1024, // 10MB limit
+    },
+    fileFilter: (req: any, file: any, cb: any) => {
+      if (file.mimetype === 'application/pdf') {
+        cb(null, true);
+      } else {
+        cb(new Error('Only PDF files are allowed'));
+      }
+    },
+  });
+} catch (error) {
+  console.warn('⚠️  multer not installed - file uploads disabled. Run: npm install multer @types/multer');
+  // Create a stub middleware that returns an error
+  upload = {
+    single: () => (req: any, res: any, next: any) => {
+      return res.status(503).json({
+        success: false,
+        message: 'File upload feature is not available. Please install multer package.',
+      });
+    },
+  };
+}
 
 export const uploadQuestReport = async (
   req: AuthRequest,
@@ -25,6 +42,13 @@ export const uploadQuestReport = async (
   next: NextFunction
 ) => {
   try {
+    if (!multer) {
+      return res.status(503).json({
+        success: false,
+        message: 'File upload feature is not available. Please install multer package.',
+      });
+    }
+
     if (!req.userId) {
       return res
         .status(401)
@@ -32,7 +56,7 @@ export const uploadQuestReport = async (
     }
 
     const questId = req.body.questId || req.query.questId;
-    const file = req.file;
+    const file = (req as any).file;
 
     if (!file) {
       return res.status(400).json({

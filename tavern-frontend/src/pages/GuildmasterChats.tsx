@@ -109,6 +109,7 @@ export default function GuildmasterChats() {
                     <h3 className="text-lg font-semibold mb-1">
                       {chat.quest.title}
                     </h3>
+                    <p className="text-xs text-slate-500 font-mono mb-1">Quest ID: {chat.quest._id}</p>
                     <div className="text-sm text-slate-400 space-y-1">
                       <p>
                         <b>NPC:</b> {chat.quest.npcName || "Unknown"}
