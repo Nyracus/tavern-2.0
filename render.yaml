@@ -20,7 +20,7 @@ services:
     env: docker
     dockerfilePath: ./tavern-backend/Dockerfile
     dockerContext: ./tavern-backend
-    plan: starter  # 512 MB RAM, 0.5 CPU
+    plan: free  # Free tier - sleeps after 15 min inactivity
     region: oregon  # Choose your preferred region
     healthCheckPath: /api/health/live
     envVars:
@@ -61,11 +61,7 @@ services:
         value: Tavern Quest Platform
       - key: FRONTEND_URL
         sync: false  # Set to your frontend URL
-    scaling:
-      minInstances: 1
-      maxInstances: 3
-      targetCPUPercent: 70
-      targetMemoryPercent: 80
+    # Free tier doesn't support scaling - removed
 
   # Backend Instance 2
   - type: web
@@ -73,7 +69,7 @@ services:
     env: docker
     dockerfilePath: ./tavern-backend/Dockerfile
     dockerContext: ./tavern-backend
-    plan: starter
+    plan: free  # Free tier - sleeps after 15 min inactivity
     region: oregon
     healthCheckPath: /api/health/live
     envVars:
@@ -114,11 +110,7 @@ services:
         value: Tavern Quest Platform
       - key: FRONTEND_URL
         sync: false
-    scaling:
-      minInstances: 1
-      maxInstances: 3
-      targetCPUPercent: 70
-      targetMemoryPercent: 80
+    # Free tier doesn't support scaling - removed
 
   # Backend Instance 3
   - type: web
@@ -126,7 +118,7 @@ services:
     env: docker
     dockerfilePath: ./tavern-backend/Dockerfile
     dockerContext: ./tavern-backend
-    plan: starter
+    plan: free  # Free tier - sleeps after 15 min inactivity
     region: oregon
     healthCheckPath: /api/health/live
     envVars:
@@ -167,11 +159,7 @@ services:
         value: Tavern Quest Platform
       - key: FRONTEND_URL
         sync: false
-    scaling:
-      minInstances: 1
-      maxInstances: 3
-      targetCPUPercent: 70
-      targetMemoryPercent: 80
+    # Free tier doesn't support scaling - removed
 
   # API Gateway (Load Balancer)
   # This replaces Nginx for Render deployment
@@ -181,7 +169,7 @@ services:
     env: node
     buildCommand: npm install
     startCommand: node gateway.js
-    plan: starter
+    plan: free  # Free tier - sleeps after 15 min inactivity
     region: oregon
     healthCheckPath: /health
     envVars:
@@ -202,11 +190,7 @@ services:
           property: host
       - key: PORT
         value: 10000
-    scaling:
-      minInstances: 1
-      maxInstances: 2
-      targetCPUPercent: 70
-      targetMemoryPercent: 80
+    # Free tier doesn't support scaling - removed
 
   # Frontend Static Site
   - type: web
