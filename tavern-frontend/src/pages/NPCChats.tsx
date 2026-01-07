@@ -1,4 +1,4 @@
-// src/pages/GuildmasterChats.tsx
+// src/pages/NPCChats.tsx
 import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import { api } from "../lib/api";
@@ -10,7 +10,6 @@ type QuestChatSummary = {
     _id: string;
     title: string;
     status: string;
-    npcName?: string | null;
     adventurerName?: string | null;
   };
   messageCount: number;
@@ -22,7 +21,7 @@ type QuestChatSummary = {
   } | null;
 };
 
-export default function GuildmasterChats() {
+export default function NPCChats() {
   const { token, user } = useAuth();
   const [chats, setChats] = useState<QuestChatSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -31,7 +30,7 @@ export default function GuildmasterChats() {
   const [selectedQuestTitle, setSelectedQuestTitle] = useState<string>("");
 
   useEffect(() => {
-    if (token && user?.role === "GUILD_MASTER") {
+    if (token && user?.role === "NPC") {
       loadChats();
     }
   }, [token, user]);
@@ -42,7 +41,7 @@ export default function GuildmasterChats() {
     setError(null);
     try {
       const res = await api.get<{ success: boolean; data: QuestChatSummary[] }>(
-        "/admin/chats",
+        "/npc/chats",
         token
       );
       setChats(res.data || []);
@@ -53,10 +52,10 @@ export default function GuildmasterChats() {
     }
   };
 
-  if (!user || user.role !== "GUILD_MASTER") {
+  if (!user || user.role !== "NPC") {
     return (
       <div className="min-h-screen bg-slate-900 text-slate-100 p-8">
-        Access denied. Guildmaster only.
+        Access denied. NPC only.
       </div>
     );
   }
@@ -67,10 +66,10 @@ export default function GuildmasterChats() {
         <header className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-extrabold tracking-wide flex items-center gap-2">
-              💬 All Quest Chats
+              💬 My Quest Chats
             </h1>
             <p className="text-sm text-slate-300">
-              Monitor and moderate all quest-related communications
+              View and continue conversations with adventurers about your quests
             </p>
           </div>
           <Link
@@ -91,14 +90,14 @@ export default function GuildmasterChats() {
           <p className="text-slate-400">Loading chats…</p>
         ) : chats.length === 0 ? (
           <div className="rounded-2xl border border-slate-700 bg-slate-900/70 p-8 text-center">
-            <p className="text-slate-400">No quest chats found.</p>
+            <p className="text-slate-400">No quest chats found. Accept an application to begin chatting!</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {chats.map((chat) => (
               <div
                 key={chat.quest._id}
-                className="rounded-2xl border border-blue-500/40 bg-slate-900/70 p-5 space-y-3 cursor-pointer hover:bg-slate-800/50 transition-colors"
+                className="rounded-2xl border border-purple-500/40 bg-slate-900/70 p-5 space-y-3 cursor-pointer hover:bg-slate-800/50 transition-colors"
                 onClick={() => {
                   setSelectedQuestId(chat.quest._id);
                   setSelectedQuestTitle(chat.quest.title);
@@ -110,9 +109,6 @@ export default function GuildmasterChats() {
                       {chat.quest.title}
                     </h3>
                     <div className="text-sm text-slate-400 space-y-1">
-                      <p>
-                        <b>NPC:</b> {chat.quest.npcName || "Unknown"}
-                      </p>
                       <p>
                         <b>Adventurer:</b> {chat.quest.adventurerName || "None"}
                       </p>
@@ -143,7 +139,7 @@ export default function GuildmasterChats() {
                   </div>
                 </div>
                 <button
-                  className="btn bg-blue-600 hover:bg-blue-700 w-full text-sm"
+                  className="btn bg-purple-600 hover:bg-purple-700 w-full text-sm"
                   onClick={(e) => {
                     e.stopPropagation();
                     setSelectedQuestId(chat.quest._id);
@@ -171,4 +167,5 @@ export default function GuildmasterChats() {
     </div>
   );
 }
+
 

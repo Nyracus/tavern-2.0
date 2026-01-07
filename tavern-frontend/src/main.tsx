@@ -1,8 +1,8 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
-import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import { createBrowserRouter, RouterProvider, Navigate } from "react-router-dom";
 import "./index.css";
-import { AuthProvider } from "./context/AuthContext";
+import { AuthProvider, useAuth } from "./context/AuthContext";
 import { NotificationProvider } from "./lib/notifications";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -16,6 +16,18 @@ import NPCCompletions from "./pages/NPCCompletions";
 import AdventurerQuestBoard from "./pages/AdventurerQuestBoard";
 import AdventurerApplications from "./pages/AdventurerApplications";
 import GuildmasterChats from "./pages/GuildmasterChats";
+import AdminConflicts from "./pages/AdminConflicts";
+import AdminTransactions from "./pages/AdminTransactions";
+import AdminUsers from "./pages/AdminUsers";
+import SkillsShopPage from "./pages/SkillsShopPage";
+import AdventurerChats from "./pages/AdventurerChats";
+import NPCChats from "./pages/NPCChats";
+
+// Component to redirect to login or dashboard based on auth state
+function NavigateToLoginOrDashboard() {
+  const { token } = useAuth();
+  return <Navigate to={token ? "/dashboard" : "/login"} replace />;
+}
 
 
 const router = createBrowserRouter([
@@ -23,9 +35,15 @@ const router = createBrowserRouter([
   { path: "/login", element: <Login /> },
   { path: "/register", element: <Register /> },
 
-  // protected app root
+  // root redirects to login (will redirect to dashboard if authenticated)
   {
     path: "/",
+    element: <NavigateToLoginOrDashboard />,
+  },
+  
+  // protected dashboard
+  {
+    path: "/dashboard",
     element: (
       <Protected>
         <Dashboard />
@@ -93,6 +111,54 @@ const router = createBrowserRouter([
     element: (
       <Protected roles={["GUILD_MASTER"]}>
         <GuildmasterChats />
+      </Protected>
+    ),
+  },
+  {
+    path: "/admin/conflicts",
+    element: (
+      <Protected roles={["GUILD_MASTER"]}>
+        <AdminConflicts />
+      </Protected>
+    ),
+  },
+  {
+    path: "/admin/transactions",
+    element: (
+      <Protected roles={["GUILD_MASTER"]}>
+        <AdminTransactions />
+      </Protected>
+    ),
+  },
+  {
+    path: "/admin/users",
+    element: (
+      <Protected roles={["GUILD_MASTER"]}>
+        <AdminUsers />
+      </Protected>
+    ),
+  },
+  {
+    path: "/skills/shop",
+    element: (
+      <Protected roles={["ADVENTURER"]}>
+        <SkillsShopPage />
+      </Protected>
+    ),
+  },
+  {
+    path: "/adventurer/chats",
+    element: (
+      <Protected roles={["ADVENTURER"]}>
+        <AdventurerChats />
+      </Protected>
+    ),
+  },
+  {
+    path: "/npc/chats",
+    element: (
+      <Protected roles={["NPC"]}>
+        <NPCChats />
       </Protected>
     ),
   },

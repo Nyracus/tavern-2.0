@@ -5,6 +5,8 @@ import { api } from "../lib/api";
 type LeaderItem = {
   position: number;
   userId: string;
+  username?: string;
+  displayName?: string;
   title: string;
   class: string;
   level: number;

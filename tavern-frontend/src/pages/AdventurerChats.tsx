@@ -1,4 +1,4 @@
-// src/pages/GuildmasterChats.tsx
+// src/pages/AdventurerChats.tsx
 import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import { api } from "../lib/api";
@@ -11,7 +11,6 @@ type QuestChatSummary = {
     title: string;
     status: string;
     npcName?: string | null;
-    adventurerName?: string | null;
   };
   messageCount: number;
   lastMessage: {
@@ -22,7 +21,7 @@ type QuestChatSummary = {
   } | null;
 };
 
-export default function GuildmasterChats() {
+export default function AdventurerChats() {
   const { token, user } = useAuth();
   const [chats, setChats] = useState<QuestChatSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -31,7 +30,7 @@ export default function GuildmasterChats() {
   const [selectedQuestTitle, setSelectedQuestTitle] = useState<string>("");
 
   useEffect(() => {
-    if (token && user?.role === "GUILD_MASTER") {
+    if (token && user?.role === "ADVENTURER") {
       loadChats();
     }
   }, [token, user]);
@@ -42,7 +41,7 @@ export default function GuildmasterChats() {
     setError(null);
     try {
       const res = await api.get<{ success: boolean; data: QuestChatSummary[] }>(
-        "/admin/chats",
+        "/adventurer/chats",
         token
       );
       setChats(res.data || []);
@@ -53,10 +52,10 @@ export default function GuildmasterChats() {
     }
   };
 
-  if (!user || user.role !== "GUILD_MASTER") {
+  if (!user || user.role !== "ADVENTURER") {
     return (
       <div className="min-h-screen bg-slate-900 text-slate-100 p-8">
-        Access denied. Guildmaster only.
+        Access denied. Adventurer only.
       </div>
     );
   }
@@ -67,10 +66,10 @@ export default function GuildmasterChats() {
         <header className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-extrabold tracking-wide flex items-center gap-2">
-              💬 All Quest Chats
+              💬 My Quest Chats
             </h1>
             <p className="text-sm text-slate-300">
-              Monitor and moderate all quest-related communications
+              View and continue conversations with NPCs about your quests
             </p>
           </div>
           <Link
@@ -91,7 +90,7 @@ export default function GuildmasterChats() {
           <p className="text-slate-400">Loading chats…</p>
         ) : chats.length === 0 ? (
           <div className="rounded-2xl border border-slate-700 bg-slate-900/70 p-8 text-center">
-            <p className="text-slate-400">No quest chats found.</p>
+            <p className="text-slate-400">No quest chats found. Start a quest to begin chatting!</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -112,9 +111,6 @@ export default function GuildmasterChats() {
                     <div className="text-sm text-slate-400 space-y-1">
                       <p>
                         <b>NPC:</b> {chat.quest.npcName || "Unknown"}
-                      </p>
-                      <p>
-                        <b>Adventurer:</b> {chat.quest.adventurerName || "None"}
                       </p>
                       <p>
                         <b>Status:</b> {chat.quest.status}
@@ -171,4 +167,5 @@ export default function GuildmasterChats() {
     </div>
   );
 }
+
 

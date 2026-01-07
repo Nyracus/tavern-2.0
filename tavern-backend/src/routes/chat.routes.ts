@@ -27,5 +27,21 @@ router.get(
   chatController.getAllQuestChats.bind(chatController)
 );
 
+// Adventurer: Get all quest chats for the adventurer
+router.get(
+  "/adventurer/chats",
+  verifyToken,
+  authorizeRole("ADVENTURER"),
+  chatController.getAdventurerQuestChats.bind(chatController)
+);
+
+// NPC: Get all quest chats for the NPC
+router.get(
+  "/npc/chats",
+  verifyToken,
+  authorizeRole("NPC"),
+  chatController.getNPCQuestChats.bind(chatController)
+);
+
 export default router;
 

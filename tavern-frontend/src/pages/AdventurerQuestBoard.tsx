@@ -35,6 +35,7 @@ type AdventurerProfile = {
   level: number;
   xp?: number;
   rank?: string;
+  class?: string;
 };
 
 export default function AdventurerQuestBoard() {
@@ -47,12 +48,14 @@ export default function AdventurerQuestBoard() {
   const [selectedQuest, setSelectedQuest] = useState<Quest | null>(null);
   const [applyNote, setApplyNote] = useState("");
   const [showApplyForm, setShowApplyForm] = useState(false);
+  const [applying, setApplying] = useState(false);
   const [profile, setProfile] = useState<AdventurerProfile | null>(null);
   const [chatQuest, setChatQuest] = useState<Quest | null>(null);
   
   // Search and filter state
   const [searchQuery, setSearchQuery] = useState("");
   const [difficultyFilter, setDifficultyFilter] = useState<string[]>([]);
+  const [classFilter, setClassFilter] = useState<string>("");
   const [minReward, setMinReward] = useState("");
   const [maxReward, setMaxReward] = useState("");
   const [sortBy, setSortBy] = useState<"createdAt" | "rewardGold" | "difficulty">("createdAt");
@@ -104,7 +107,7 @@ export default function AdventurerQuestBoard() {
       );
       
       // Load recommended quests (with ranking) - only if no search/filters
-      if (!searchQuery && difficultyFilter.length === 0 && !minReward && !maxReward) {
+      if (!searchQuery && difficultyFilter.length === 0 && !classFilter && !minReward && !maxReward) {
         const recommendedRes = await api.get<{ success: boolean; data: Quest[] }>(
           "/quests/recommended",
           token
@@ -114,7 +117,29 @@ export default function AdventurerQuestBoard() {
         setRecommendedQuests([]);
       }
 
-      setQuests(res.data);
+      // Apply class filter if selected
+      let filteredQuests = res.data;
+      if (classFilter) {
+        const classKeywords: Record<string, string[]> = {
+          "archer": ["archer", "ranger", "ranged", "bow", "arrow", "scout", "hunt", "track"],
+          "mage": ["mage", "wizard", "sorcerer", "magic", "arcane", "spell", "enchant", "alchemy"],
+          "fighter": ["fighter", "warrior", "combat", "melee", "sword", "shield", "guard", "warfare"],
+          "rogue": ["rogue", "thief", "stealth", "assassin", "lockpick", "trap", "pickpocket"],
+          "cleric": ["cleric", "paladin", "holy", "heal", "divine", "protection", "bless"],
+          "bard": ["bard", "performance", "music", "diplomacy", "entertain", "sing"],
+          "druid": ["druid", "nature", "animal", "wild", "forest", "plant", "elemental"],
+          "monk": ["monk", "martial", "meditation", "discipline", "fist", "speed"],
+          "barbarian": ["barbarian", "rage", "strength", "berserk", "fury", "endurance"],
+        };
+        
+        const keywords = classKeywords[classFilter] || [];
+        filteredQuests = res.data.filter(quest => {
+          const questText = `${quest.title} ${quest.description}`.toLowerCase();
+          return keywords.some(keyword => questText.includes(keyword));
+        });
+      }
+
+      setQuests(filteredQuests);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to load quests");
     } finally {
@@ -129,23 +154,28 @@ export default function AdventurerQuestBoard() {
       }, searchQuery ? 500 : 0); // Debounce search
       return () => clearTimeout(timeoutId);
     }
-  }, [searchQuery, difficultyFilter, minReward, maxReward, sortBy, sortOrder]);
+  }, [searchQuery, difficultyFilter, classFilter, minReward, maxReward, sortBy, sortOrder]);
 
   const handleApply = async (questId: string) => {
-    if (!token) return;
+    if (!token || applying) return;
     setError(null);
+    setApplying(true);
     try {
       await api.post<{ success: boolean; data: Quest }>(
         `/quests/${questId}/apply`,
         { note: applyNote || undefined },
         token
       );
+      // Close modal immediately after successful application
       setShowApplyForm(false);
       setApplyNote("");
       setSelectedQuest(null);
+      // Reload quests to update the UI
       await loadQuests();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to apply to quest");
+    } finally {
+      setApplying(false);
     }
   };
 
@@ -213,7 +243,7 @@ export default function AdventurerQuestBoard() {
               📋 My Applications
             </Link>
             <Link
-              to="/"
+              to="/dashboard"
               className="text-xs md:text-sm px-3 py-2 rounded-lg border border-slate-600 text-slate-300 hover:bg-slate-700/50"
             >
               ← Back to Dashboard
@@ -246,7 +276,26 @@ export default function AdventurerQuestBoard() {
           </div>
 
           {showFilters && (
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-3 pt-3 border-t border-slate-700">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-3 pt-3 border-t border-slate-700">
+              <div>
+                <label className="text-sm font-semibold mb-1 block">Class Match</label>
+                <select
+                  className="input bg-slate-800"
+                  value={classFilter}
+                  onChange={(e) => setClassFilter(e.target.value)}
+                >
+                  <option value="">All Classes</option>
+                  <option value="archer">🏹 Archer/Ranger</option>
+                  <option value="mage">🔮 Mage/Wizard/Sorcerer</option>
+                  <option value="fighter">⚔️ Fighter/Warrior</option>
+                  <option value="rogue">🗡️ Rogue/Thief</option>
+                  <option value="cleric">✨ Cleric/Paladin</option>
+                  <option value="bard">🎵 Bard</option>
+                  <option value="druid">🌿 Druid</option>
+                  <option value="monk">🥋 Monk</option>
+                  <option value="barbarian">💪 Barbarian</option>
+                </select>
+              </div>
               <div>
                 <label className="text-sm font-semibold mb-1 block">Difficulty</label>
                 <div className="flex flex-wrap gap-2">
@@ -322,6 +371,7 @@ export default function AdventurerQuestBoard() {
               setFilter("recommended");
               setSearchQuery("");
               setDifficultyFilter([]);
+              setClassFilter("");
               setMinReward("");
               setMaxReward("");
             }}
@@ -438,8 +488,21 @@ export default function AdventurerQuestBoard() {
 
         {/* Apply form modal */}
         {showApplyForm && selectedQuest && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-slate-900 rounded-2xl border border-blue-500/40 w-full max-w-md p-6 space-y-4">
+          <div 
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+            onClick={(e) => {
+              // Close modal when clicking outside
+              if (e.target === e.currentTarget && !applying) {
+                setShowApplyForm(false);
+                setSelectedQuest(null);
+                setApplyNote("");
+              }
+            }}
+          >
+            <div 
+              className="bg-slate-900 rounded-2xl border border-blue-500/40 w-full max-w-md p-6 space-y-4"
+              onClick={(e) => e.stopPropagation()}
+            >
               <h3 className="text-xl font-semibold">Apply to Quest: {selectedQuest.title}</h3>
               <div>
                 <label className="text-sm font-semibold">Application Note (optional)</label>
@@ -454,8 +517,9 @@ export default function AdventurerQuestBoard() {
                 <button
                   onClick={() => handleApply(selectedQuest._id)}
                   className="btn bg-blue-600 hover:bg-blue-700 flex-1"
+                  disabled={applying}
                 >
-                  Submit Application
+                  {applying ? "Submitting..." : "Submit Application"}
                 </button>
                 <button
                   onClick={() => {
@@ -464,6 +528,7 @@ export default function AdventurerQuestBoard() {
                     setApplyNote("");
                   }}
                   className="btn bg-slate-600 hover:bg-slate-700"
+                  disabled={applying}
                 >
                   Cancel
                 </button>

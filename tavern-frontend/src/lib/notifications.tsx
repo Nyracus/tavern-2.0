@@ -52,7 +52,19 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         '/notifications?limit=50',
         token
       );
-      setNotifications(res.notifications || []);
+      const newNotifications = res.notifications || [];
+      
+      // Check if there's a new payment notification
+      const hasNewPayment = newNotifications.some(
+        n => n.type === 'QUEST_PAYMENT_RECEIVED' && !n.read
+      );
+      
+      if (hasNewPayment) {
+        // Dispatch event to refresh gold immediately
+        window.dispatchEvent(new CustomEvent('paymentReceived'));
+      }
+      
+      setNotifications(newNotifications);
       setUnreadCount(res.unreadCount || 0);
     } catch (err) {
       console.error('Failed to fetch notifications', err);
@@ -62,13 +74,15 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   }, [token]);
 
   useEffect(() => {
+    if (!token) return;
+    
     fetchNotifications();
-    // Poll for new notifications every 10 seconds
+    // Poll for new notifications every 15 seconds (reduced frequency to avoid rate limits)
     const interval = setInterval(() => {
       fetchNotifications();
-    }, 10000);
+    }, 15000);
     return () => clearInterval(interval);
-  }, [fetchNotifications]);
+  }, [fetchNotifications, token]);
 
   const markRead = async (id: string) => {
     if (!token) return;

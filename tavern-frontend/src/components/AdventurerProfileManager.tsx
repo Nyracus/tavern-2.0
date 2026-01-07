@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { api } from "../lib/api";
-import SkillsShop from "./SkillsShop";
+import XPMeter from "./XPMeter";
 
 type AdventurerSkill = {
   _id: string;
@@ -32,6 +32,9 @@ type AdventurerProfile = {
   background?: string;
   attributes: Attributes;
   skills: AdventurerSkill[];
+  xp?: number;
+  rank?: string;
+  availableStatPoints?: number;
 };
 
 type ApiResponse<T> = {
@@ -261,6 +264,29 @@ export default function AdventurerProfileManager() {
     }
   };
 
+  const handleAllocateStat = async (stat: "strength" | "dexterity" | "intelligence") => {
+    if (!token || !profile) return;
+    setError(null);
+    try {
+      const res = await api.post<ApiResponse<AdventurerProfile> & { message?: string }>(
+        "/adventurers/me/allocate-stat",
+        { stat },
+        token
+      );
+      setProfile(res.data);
+      // Update form attributes to reflect new stat values
+      setForm((prev) => ({
+        ...prev,
+        attributes: res.data.attributes,
+      }));
+      // Trigger a custom event to refresh profile display
+      window.dispatchEvent(new CustomEvent('profileUpdated'));
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to allocate stat point";
+      setError(msg);
+    }
+  };
+
   const handleProfileSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!token) return;
@@ -269,15 +295,20 @@ export default function AdventurerProfileManager() {
     setError(null);
 
     // NOTE: we still send level, but player cannot change it in the UI.
-    const payload = {
+    // Class can only be set on creation, not on update
+    const payload: any = {
       title: form.title,
       summary: form.summary,
-      class: form.charClass,
       level: form.level, // stays 1 unless backend/admin updates it
       race: form.race || undefined,
       background: form.background || undefined,
       attributes: form.attributes,
     };
+    
+    // Only include class if creating a new profile (not updating)
+    if (!profile) {
+      payload.class = form.charClass;
+    }
 
     try {
       let res: ApiResponse<AdventurerProfile>;
@@ -377,6 +408,49 @@ export default function AdventurerProfileManager() {
         </div>
       )}
 
+      {/* Stat Point Allocation */}
+      {profile && (profile.availableStatPoints ?? 0) > 0 && (
+        <div className="rounded-2xl border border-purple-500/40 bg-slate-900/70 p-5 space-y-3">
+          <h3 className="text-lg font-semibold flex items-center gap-2">
+            ⭐ Stat Point Allocation
+          </h3>
+          <p className="text-sm text-slate-300">
+            You have <span className="font-bold text-purple-300">{profile.availableStatPoints}</span> unallocated stat point{profile.availableStatPoints !== 1 ? 's' : ''} from leveling up!
+          </p>
+          <p className="text-xs text-slate-400">
+            Allocate +1 point to Strength, Dexterity, or Intelligence (max 20 per stat)
+          </p>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => handleAllocateStat("strength")}
+              disabled={profile.attributes.strength >= 20}
+              className="btn bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm px-4 py-2"
+            >
+              +1 STR {profile.attributes.strength >= 20 && "(MAX)"}
+            </button>
+            <button
+              onClick={() => handleAllocateStat("dexterity")}
+              disabled={profile.attributes.dexterity >= 20}
+              className="btn bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm px-4 py-2"
+            >
+              +1 DEX {profile.attributes.dexterity >= 20 && "(MAX)"}
+            </button>
+            <button
+              onClick={() => handleAllocateStat("intelligence")}
+              disabled={profile.attributes.intelligence >= 20}
+              className="btn bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm px-4 py-2"
+            >
+              +1 INT {profile.attributes.intelligence >= 20 && "(MAX)"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* XP Meter - Show rank progression */}
+      {profile && (profile.xp !== undefined || profile.rank) && (
+        <XPMeter xp={profile.xp || 0} rank={profile.rank || 'F'} />
+      )}
+
       {/* Profile form – parchment card - only show when editing */}
       {editingProfile && (
         <form
@@ -386,6 +460,15 @@ export default function AdventurerProfileManager() {
         <h3 className="text-lg font-semibold flex items-center gap-2">
           ✒️ Edit / Create Adventurer Profile
         </h3>
+        
+        {profile && profile.class && (
+          <div className="rounded-lg border border-amber-600 bg-amber-50 p-3 text-sm text-amber-800">
+            <p>
+              ⚠️ <strong>Class is Fixed:</strong> Your class "{profile.class}" cannot be changed after creation. 
+              To change your class, submit an anomaly application to the Guild Master.
+            </p>
+          </div>
+        )}
 
         <div className="grid md:grid-cols-2 gap-4">
           <div>
@@ -401,14 +484,37 @@ export default function AdventurerProfileManager() {
           </div>
           <div>
             <label className="text-sm font-semibold">Class</label>
-            <input
-              className="input bg-amber-50"
-              name="charClass"
-              placeholder="Warrior"
-              value={form.charClass}
-              onChange={handleProfileChange}
-              required
-            />
+            {profile && profile.class ? (
+              <div className="input bg-amber-100/80 flex items-center h-[42px] text-sm">
+                <span className="font-medium mr-1">{profile.class}</span>
+                <span className="text-xs text-slate-600 ml-2">
+                  (Fixed - submit anomaly application to Guild Master to change)
+                </span>
+              </div>
+            ) : (
+              <select
+                className="input bg-amber-50"
+                name="charClass"
+                value={form.charClass}
+                onChange={handleProfileChange}
+                required
+              >
+                <option value="">Select Class</option>
+                <option value="Fighter">⚔️ Fighter</option>
+                <option value="Mage">🔮 Mage</option>
+                <option value="Archer">🏹 Archer</option>
+                <option value="Rogue">🗡️ Rogue</option>
+                <option value="Cleric">✨ Cleric</option>
+                <option value="Paladin">🛡️ Paladin</option>
+                <option value="Ranger">🌿 Ranger</option>
+                <option value="Wizard">📜 Wizard</option>
+                <option value="Sorcerer">⚡ Sorcerer</option>
+                <option value="Bard">🎵 Bard</option>
+                <option value="Druid">🌲 Druid</option>
+                <option value="Monk">🥋 Monk</option>
+                <option value="Barbarian">💪 Barbarian</option>
+              </select>
+            )}
           </div>
 
           {/* 🔒 Level is read-only: player sees it, but cannot edit */}
@@ -532,9 +638,6 @@ export default function AdventurerProfileManager() {
           </ul>
         )}
       </div>
-
-      {/* Skills Shop */}
-      <SkillsShop />
     </section>
   );
 }

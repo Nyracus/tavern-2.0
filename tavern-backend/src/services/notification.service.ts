@@ -1,6 +1,7 @@
 // src/services/notification.service.ts
 import { Types } from "mongoose";
 import { NotificationModel, NotificationDocument, NotificationType } from "../models/notification.model";
+import { emailService } from "./email.service";
 
 export class NotificationService {
   /**
@@ -101,6 +102,8 @@ export class NotificationService {
       `${adventurerName} has applied to your quest: "${questTitle}"`,
       { questId, applicationId }
     );
+    // Send email notification
+    await emailService.sendQuestApplicationReceived(npcId, questId, questTitle, adventurerName);
   }
 
   async notifyQuestApplicationAccepted(
@@ -119,6 +122,8 @@ export class NotificationService {
       `Your application for "${questTitle}" has been accepted!${deadlineText}`,
       { questId }
     );
+    // Send email notification
+    await emailService.sendQuestApplicationAccepted(adventurerId, questId, questTitle, deadline);
   }
 
   async notifyQuestApplicationRejected(
@@ -131,6 +136,14 @@ export class NotificationService {
       "QUEST_APPLICATION_REJECTED",
       "Quest Application Rejected",
       `Your application for "${questTitle}" has been rejected.`,
+      { questId }
+    );
+    // Send email notification
+    await emailService.sendNotificationEmail(
+      adventurerId,
+      "Quest Application Rejected",
+      `Your application for "${questTitle}" has been rejected.`,
+      "QUEST_APPLICATION_REJECTED",
       { questId }
     );
   }
@@ -148,6 +161,14 @@ export class NotificationService {
       `${adventurerName} has submitted completion for "${questTitle}". Please review.`,
       { questId }
     );
+    // Send email notification
+    await emailService.sendNotificationEmail(
+      npcId,
+      "Quest Completion Submitted",
+      `${adventurerName} has submitted completion for "${questTitle}". Please review.`,
+      "QUEST_COMPLETION_SUBMITTED",
+      { questId }
+    );
   }
 
   async notifyQuestPaymentReceived(
@@ -163,6 +184,8 @@ export class NotificationService {
       `You have received ${amount} gold for completing "${questTitle}"!`,
       { questId, amount }
     );
+    // Send email notification
+    await emailService.sendPaymentReceived(adventurerId, questId, questTitle, amount);
   }
 
   async notifyQuestDeadlineApproaching(

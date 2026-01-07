@@ -26,6 +26,8 @@ type Quest = {
   }>;
   createdAt: string;
   updatedAt: string;
+  hasConflict?: boolean;
+  completionSubmittedAt?: string;
 };
 
 type QuestForm = {
@@ -33,7 +35,6 @@ type QuestForm = {
   description: string;
   difficulty: QuestDifficulty;
   rewardGold: number;
-  deadline?: string;
 };
 
 export default function NPCQuestBoard() {
@@ -44,21 +45,31 @@ export default function NPCQuestBoard() {
   const [showForm, setShowForm] = useState(false);
   const [editingQuest, setEditingQuest] = useState<Quest | null>(null);
   const [chatQuest, setChatQuest] = useState<Quest | null>(null);
+  const [raisingDeadlineConflict, setRaisingDeadlineConflict] = useState<string | null>(null);
   const [form, setForm] = useState<QuestForm>({
     title: "",
     description: "",
     difficulty: "Easy",
     rewardGold: 0,
-    deadline: "",
   });
 
   useEffect(() => {
-    if (token) loadQuests();
+    if (!token) return;
+    
+    // Initial load
+    loadQuests();
+    
+    // Poll for quest updates every 10 seconds
+    const interval = setInterval(() => {
+      loadQuests(true); // Silent polling
+    }, 10000);
+    
+    return () => clearInterval(interval);
   }, [token]);
 
-  const loadQuests = async () => {
+  const loadQuests = async (silent = false) => {
     if (!token) return;
-    setLoading(true);
+    if (!silent) setLoading(true);
     setError(null);
     try {
       const res = await api.get<{ success: boolean; data: Quest[] }>(
@@ -67,9 +78,12 @@ export default function NPCQuestBoard() {
       );
       setQuests(res.data);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to load quests");
+      // Don't show error on polling failures, only on initial load
+      if (!silent) {
+        setError(err instanceof Error ? err.message : "Failed to load quests");
+      }
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
@@ -84,9 +98,6 @@ export default function NPCQuestBoard() {
       difficulty: form.difficulty,
       rewardGold: form.rewardGold,
     };
-    if (form.deadline) {
-      payload.deadline = new Date(form.deadline).toISOString();
-    }
 
     try {
       if (editingQuest) {
@@ -104,7 +115,7 @@ export default function NPCQuestBoard() {
       }
       setShowForm(false);
       setEditingQuest(null);
-      setForm({ title: "", description: "", difficulty: "Easy", rewardGold: 0, deadline: "" });
+      setForm({ title: "", description: "", difficulty: "Easy", rewardGold: 0 });
       await loadQuests();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to save quest");
@@ -118,7 +129,6 @@ export default function NPCQuestBoard() {
       description: quest.description,
       difficulty: quest.difficulty,
       rewardGold: quest.rewardGold || 0,
-      deadline: quest.deadline ? new Date(quest.deadline).toISOString().slice(0, 16) : "",
     });
     setShowForm(true);
   };
@@ -145,6 +155,39 @@ export default function NPCQuestBoard() {
     }
   };
 
+  const canRaiseDeadlineConflict = (quest: Quest) => {
+    if (quest.status !== "Accepted" || quest.hasConflict) return false;
+    if (!quest.deadline) return false;
+    const now = new Date();
+    const deadline = new Date(quest.deadline);
+    // Deadline passed and completion NOT submitted (if submitted, cannot raise conflict)
+    return now > deadline && !quest.completionSubmittedAt;
+  };
+
+  const handleRaiseDeadlineConflict = async (questId: string) => {
+    if (!token) return;
+    if (!confirm("Raise a conflict for missed deadline? The Guild Master will review and resolve.")) {
+      return;
+    }
+
+    setRaisingDeadlineConflict(questId);
+    setError(null);
+    try {
+      await api.post(
+        `/quests/${questId}/conflicts/raise-deadline`,
+        {
+          description: "Deadline missed - adventurer did not submit completion by the agreed deadline",
+        },
+        token
+      );
+      await loadQuests();
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to raise deadline conflict");
+    } finally {
+      setRaisingDeadlineConflict(null);
+    }
+  };
+
   if (!user || user.role !== "NPC") {
     return <div className="min-h-screen bg-slate-900 text-slate-100 p-8">Access denied. NPC only.</div>;
   }
@@ -164,14 +207,14 @@ export default function NPCQuestBoard() {
               onClick={() => {
                 setShowForm(!showForm);
                 setEditingQuest(null);
-                setForm({ title: "", description: "", difficulty: "Easy", rewardGold: 0, deadline: "" });
+                setForm({ title: "", description: "", difficulty: "Easy", rewardGold: 0 });
               }}
               className="btn bg-purple-600 hover:bg-purple-700 text-sm px-4 py-2"
             >
               {showForm ? "Cancel" : "+ Post Quest"}
             </button>
             <Link
-              to="/"
+              to="/dashboard"
               className="text-xs md:text-sm px-3 py-2 rounded-lg border border-slate-600 text-slate-300 hover:bg-slate-700/50"
             >
               ← Back to Dashboard
@@ -225,15 +268,6 @@ export default function NPCQuestBoard() {
                   value={form.rewardGold}
                   onChange={(e) => setForm({ ...form, rewardGold: Number(e.target.value) })}
                   required
-                />
-              </div>
-              <div>
-                <label className="text-sm font-semibold">Deadline (optional)</label>
-                <input
-                  className="input bg-slate-800"
-                  type="datetime-local"
-                  value={form.deadline}
-                  onChange={(e) => setForm({ ...form, deadline: e.target.value })}
                 />
               </div>
             </div>
@@ -320,7 +354,31 @@ export default function NPCQuestBoard() {
                         Review & Pay
                       </Link>
                     )}
-                    {(quest.status === "Accepted" || quest.status === "Completed") && (
+                    {quest.status === "Accepted" && (
+                      <>
+                        {!quest.hasConflict && canRaiseDeadlineConflict(quest) && (
+                          <button
+                            onClick={() => handleRaiseDeadlineConflict(quest._id)}
+                            disabled={raisingDeadlineConflict === quest._id}
+                            className="btn bg-orange-600 hover:bg-orange-700 text-sm px-3 py-1 disabled:opacity-50"
+                          >
+                            {raisingDeadlineConflict === quest._id ? "Raising..." : "⚖️ Deadline Missed"}
+                          </button>
+                        )}
+                        {quest.hasConflict && (
+                          <span className="text-sm text-orange-400 px-3 py-1 border border-orange-500/40 rounded-lg">
+                            ⚖️ Conflict Active
+                          </span>
+                        )}
+                        <button
+                          onClick={() => setChatQuest(quest)}
+                          className="btn bg-indigo-600 hover:bg-indigo-700 text-sm px-3 py-1"
+                        >
+                          💬 Chat
+                        </button>
+                      </>
+                    )}
+                    {quest.status === "Completed" && (
                       <button
                         onClick={() => setChatQuest(quest)}
                         className="btn bg-indigo-600 hover:bg-indigo-700 text-sm px-3 py-1"

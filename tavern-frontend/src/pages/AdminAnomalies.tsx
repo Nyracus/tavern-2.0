@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { api } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 
@@ -80,13 +81,33 @@ export default function AdminAnomalies() {
               Review strange behavior from NPCs and adventurers across the realm.
             </p>
           </div>
-          <button
-            onClick={triggerScan}
-            disabled={loading}
-            className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-sm font-medium"
-          >
-            {loading ? "Scanning…" : "Scan for anomalies"}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={triggerScan}
+              disabled={loading}
+              className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-sm font-medium"
+            >
+              {loading ? "Scanning…" : "Scan for anomalies"}
+            </button>
+            <Link
+              to="/admin/conflicts"
+              className="text-xs md:text-sm px-3 py-2 rounded-lg border border-orange-500/60 text-orange-300 hover:bg-orange-500/10"
+            >
+              ⚖️ Conflicts
+            </Link>
+            <Link
+              to="/admin/transactions"
+              className="text-xs md:text-sm px-3 py-2 rounded-lg border border-amber-500/60 text-amber-300 hover:bg-amber-500/10"
+            >
+              📜 Ledger
+            </Link>
+            <Link
+              to="/dashboard"
+              className="text-xs md:text-sm px-3 py-2 rounded-lg border border-slate-600 text-slate-300 hover:bg-slate-700/50"
+            >
+              ← Dashboard
+            </Link>
+          </div>
         </header>
 
         <section className="rounded-2xl border border-slate-700 bg-slate-900/70 p-4 space-y-3">
