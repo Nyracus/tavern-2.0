@@ -66,7 +66,6 @@ class AdventurerProfileService {
     if (data.summary !== undefined) profile.summary = data.summary;
     if (data.race !== undefined) profile.race = data.race;
     if (data.background !== undefined) profile.background = data.background;
-    if (data.logoUrl !== undefined) profile.logoUrl = data.logoUrl;
     if (data.attributes !== undefined) {
       Object.assign(profile.attributes, data.attributes);
     }

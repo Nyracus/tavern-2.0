@@ -117,4 +117,3 @@ After applying fixes, the blueprint should validate successfully. All services w
 4. Copy JWT_SECRET from backend-1 to others
 5. Test deployment
 
-

@@ -9,7 +9,6 @@ export interface INpcOrganization extends Document {
   description?: string;
   domain?: string;            // e.g. "Software", "Art", "Research"
   website?: string;
-  logoUrl?: string;           // Logo image URL from Supabase Storage
   verified: boolean;
 
   // Trust metrics

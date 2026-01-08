@@ -398,4 +398,3 @@ docker-compose exec redis redis-cli KEYS "*"
 - [ ] Configure firewall rules
 - [ ] Set up health check monitoring
 
-

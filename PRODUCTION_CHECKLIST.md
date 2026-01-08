@@ -157,4 +157,3 @@ All documentation available:
 - `IMPLEMENTATION_SUMMARY.md` - Architecture overview
 - `nginx/README.md` - Nginx configuration guide
 
-

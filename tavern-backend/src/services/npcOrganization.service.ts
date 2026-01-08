@@ -92,7 +92,6 @@ class NpcOrganizationService {
       description?: string;
       domain?: string;
       website?: string;
-      logoUrl?: string;
     }>
   ): Promise<INpcOrganization> {
     const org = await NpcOrganizationModel.findOneAndUpdate(

@@ -11,7 +11,7 @@ const router = Router();
  * Used by load balancer to check if instance is healthy
  */
 router.get('/health', async (req: Request, res: Response) => {
-  const checks: Record<string, any> = {
+  const checks: Record<string, boolean | string> = {
     status: 'ok',
     timestamp: new Date().toISOString(),
     instance: process.env.INSTANCE_ID || 'unknown',

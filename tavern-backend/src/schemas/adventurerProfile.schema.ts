@@ -31,9 +31,7 @@ export const createAdventurerProfileSchema = z.object({
 });
 
 export const updateAdventurerProfileSchema =
-  createAdventurerProfileSchema.partial().extend({
-    logoUrl: z.string().url().optional(),
-  });
+  createAdventurerProfileSchema.partial();
 
 export const addSkillSchema = adventurerSkillSchema;
 export const updateSkillSchema = adventurerSkillSchema.partial();
