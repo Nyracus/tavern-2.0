@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { api } from "../lib/api";
 
 
@@ -21,6 +21,7 @@ type AuthCtx = {
   token: string | null;
   login: (emailOrUsername: string, password: string) => Promise<void>;
   register: (payload: {
+    id: string;
     email: string;
     username: string;
     displayName: string;
@@ -78,16 +79,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(res.user);
   };
 
-  const register = async (payload: {
-    email: string;
-    username: string;
-    displayName: string;
-    password: string;
-    role?: Role;
-    avatarUrl?: string;
-  }) => {
+  const register = async (payload: any) => {
     // Registration should not auto-login; user must login explicitly.
-    // Backend generates the id, so we don't need to include it
     await api.post<{ success: boolean; token: string; user: User }>(
       "/auth/register",
       payload

@@ -334,7 +334,7 @@ export default function AdventurerApplications() {
                               const res = await api.post<{ success: boolean; data: Quest; penalty: number; newGoldBalance: number; message: string }>(
                                 `/quests/${quest._id}/cancel`,
                                 {},
-                                token || undefined
+                                token
                               );
                               if (res.message) {
                                 alert(res.message);

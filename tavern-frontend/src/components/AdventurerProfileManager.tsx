@@ -71,7 +71,21 @@ const emptyForm: ProfileForm = {
   attributes: emptyAttributes,
 };
 
-// Removed unused SkillForm type and emptySkillForm
+type SkillForm = {
+  name: string;
+  description: string;
+  level: number;
+  category: string;
+  cooldown: string;
+};
+
+const emptySkillForm: SkillForm = {
+  name: "",
+  description: "",
+  level: 1,
+  category: "",
+  cooldown: "",
+};
 
 const BASE = import.meta.env.VITE_API_URL as string;
 
@@ -95,13 +109,30 @@ async function patchJson<T>(
   return res.json() as Promise<T>;
 }
 
-// Removed unused deleteRequest function
+async function deleteRequest<T>(path: string, token: string): Promise<T> {
+  const res = await fetch(`${BASE}${path}`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!res.ok) {
+    throw new Error(await res.text());
+  }
+
+  try {
+    return (await res.json()) as T;
+  } catch {
+    return undefined as unknown as T;
+  }
+}
 
 export default function AdventurerProfileManager() {
   const { token, user } = useAuth();
   const [profile, setProfile] = useState<AdventurerProfile | null>(null);
   const [form, setForm] = useState<ProfileForm>(emptyForm);
-  const [, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
   const [savingProfile, setSavingProfile] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [editingProfile, setEditingProfile] = useState(false);
@@ -216,7 +247,7 @@ export default function AdventurerProfileManager() {
   };
 
   const handleProfileChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
     if (name in form.attributes) {

@@ -7,7 +7,6 @@ import {
   NpcOrganizationModel,
   TrustTier,
 } from '../models/npcOrganization.model';
-import { UpdateNpcOrganizationSelfInput } from '../schemas/npcOrganization.schema';
 import { Quest } from '../models/quest.model';
 
 function computeTrustTier(score: number): TrustTier {
@@ -88,7 +87,13 @@ class NpcOrganizationService {
 
   async updateForNpc(
     userId: string,
-    data: UpdateNpcOrganizationSelfInput
+    data: Partial<{
+      name: string;
+      description?: string;
+      domain?: string;
+      website?: string;
+      logoUrl?: string;
+    }>
   ): Promise<INpcOrganization> {
     const org = await NpcOrganizationModel.findOneAndUpdate(
       { userId },

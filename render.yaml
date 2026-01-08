@@ -60,12 +60,7 @@ services:
       - key: FROM_NAME
         value: Tavern Quest Platform
       - key: FRONTEND_URL
-        # Frontend URL for email links (e.g., https://tavern-frontend.onrender.com)
-        # If frontend is served from API Gateway, use: https://tavern-api-gateway.onrender.com
-        fromService:
-          type: web
-          name: tavern-frontend
-          property: host
+        sync: false  # Set to your frontend URL
     # Free tier doesn't support scaling - removed
 
   # Backend Instance 2
@@ -114,10 +109,7 @@ services:
       - key: FROM_NAME
         value: Tavern Quest Platform
       - key: FRONTEND_URL
-        fromService:
-          type: web
-          name: tavern-frontend
-          property: host
+        sync: false
     # Free tier doesn't support scaling - removed
 
   # Backend Instance 3
@@ -166,10 +158,7 @@ services:
       - key: FROM_NAME
         value: Tavern Quest Platform
       - key: FRONTEND_URL
-        fromService:
-          type: web
-          name: tavern-frontend
-          property: host
+        sync: false
     # Free tier doesn't support scaling - removed
 
   # API Gateway (Load Balancer)
@@ -211,7 +200,8 @@ services:
     staticPublishPath: ./tavern-frontend/dist
     envVars:
       - key: VITE_API_URL
-        # Points to API Gateway which load balances across backend instances
+        # Note: Update manually after API gateway deploys
+        # Format: https://tavern-api-gateway.onrender.com/api
         value: https://tavern-api-gateway.onrender.com/api
     routes:
       - type: rewrite
