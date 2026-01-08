@@ -13,6 +13,7 @@ export type User = {
   role: Role;
   gold?: number;
   needsProfileSetup?: boolean;
+  emailVerified?: boolean;
 };
 
 type AuthCtx = {

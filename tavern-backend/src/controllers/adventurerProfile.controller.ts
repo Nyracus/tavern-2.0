@@ -26,11 +26,6 @@ const calculateRank = (xp: number): string => {
   return "F";
 };
 
-// Helper: calculate level from XP (1 level per 100 XP)
-const calculateLevel = (xp: number): number => {
-  return Math.floor(xp / 100) + 1;
-};
-
 // Helper used by quest.controller to award XP
 export const addXP = async (userId: string, earnedXP: number) => {
   const profile = await AdventurerProfileModel.findOne({ userId });
@@ -41,18 +36,21 @@ export const addXP = async (userId: string, earnedXP: number) => {
   // use `any` so TS doesn't complain about xp/rank not being in the interface yet
   const p: any = profile;
   const currentXp = p.xp ?? 0;
-  const currentLevel = p.level ?? 1;
+  const currentRank = p.rank ?? "F";
   const newXp = currentXp + earnedXP;
-  const newLevel = calculateLevel(newXp);
+  const newRank = calculateRank(newXp);
 
   p.xp = newXp;
-  p.rank = calculateRank(newXp);
-  p.level = newLevel;
+  p.rank = newRank;
 
-  // Grant stat points for level ups (1 point per level gained)
-  const levelsGained = newLevel - currentLevel;
-  if (levelsGained > 0) {
-    p.availableStatPoints = (p.availableStatPoints ?? 0) + levelsGained;
+  // Grant stat points for rank ups (1 point per rank gained)
+  const rankOrder = ["F", "E", "D", "C", "B", "A", "S", "SS", "SSS"];
+  const currentRankIndex = rankOrder.indexOf(currentRank);
+  const newRankIndex = rankOrder.indexOf(newRank);
+  const ranksGained = newRankIndex - currentRankIndex;
+  
+  if (ranksGained > 0) {
+    p.availableStatPoints = (p.availableStatPoints ?? 0) + ranksGained;
   }
 
   await profile.save();

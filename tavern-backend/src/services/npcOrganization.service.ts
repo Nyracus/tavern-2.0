@@ -7,6 +7,7 @@ import {
   NpcOrganizationModel,
   TrustTier,
 } from '../models/npcOrganization.model';
+import { UpdateNpcOrganizationSelfInput } from '../schemas/npcOrganization.schema';
 import { Quest } from '../models/quest.model';
 
 function computeTrustTier(score: number): TrustTier {
@@ -48,12 +49,18 @@ class NpcOrganizationService {
       throw new AppError(409, 'Organization profile already exists for this NPC');
     }
 
-    const trustScore = 50;
+    // Set verified status based on user's email verification
+    const verified = Boolean(user.emailVerified);
+    
+    // Calculate initial trust score (higher if email is verified)
+    const baseTrustScore = verified ? 60 : 50;
+    const trustScore = baseTrustScore;
     const trustTier = computeTrustTier(trustScore);
 
     const org = await NpcOrganizationModel.create({
       userId,
       ...data,
+      verified,
       trustScore,
       trustTier,
     });
@@ -63,12 +70,7 @@ class NpcOrganizationService {
 
   async updateForNpc(
     userId: string,
-    data: Partial<{
-      name: string;
-      description?: string;
-      domain?: string;
-      website?: string;
-    }>
+    data: UpdateNpcOrganizationSelfInput
   ): Promise<INpcOrganization> {
     const org = await NpcOrganizationModel.findOneAndUpdate(
       { userId },
@@ -162,13 +164,31 @@ class NpcOrganizationService {
     // disputes not implemented yet
     const disputeRate = 0;
 
-    // basic trust score formula
+    // Get user's email verification status
+    const user = await UserModel.findById(org.userId).select('emailVerified').lean<any>();
+    const emailVerified = Boolean(user?.emailVerified);
+    
+    // Update organization verified status if email is verified
+    if (emailVerified && !org.verified) {
+      await NpcOrganizationModel.findByIdAndUpdate(org._id, { $set: { verified: true } }).exec();
+      org.verified = true;
+    }
+    
+    // Trust score formula: base score + completion rate bonus - cancelled penalty + verification bonus
+    const baseScore = org.verified ? 60 : 50; // Higher base if verified
     const trustScore = clamp(
-      Math.round(50 + completionRate * 0.4 - cancelled * 2),
+      Math.round(baseScore + completionRate * 0.4 - cancelled * 2 + (org.verified ? 5 : 0)),
       0,
       100
     );
     const trustTier = computeTrustTier(trustScore);
+    
+    // Update trust score if it changed
+    if (Math.abs(org.trustScore - trustScore) > 1) {
+      await NpcOrganizationModel.findByIdAndUpdate(org._id, { 
+        $set: { trustScore, trustTier } 
+      }).exec();
+    }
 
     let summary =
       trustTier === 'HIGH'

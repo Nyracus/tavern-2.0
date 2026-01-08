@@ -1,5 +1,6 @@
 // src/pages/_NpcOrganizationManager.tsx
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { api } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 
@@ -46,6 +47,8 @@ export default function NpcOrganizationManager() {
   const [org, setOrg] = useState<Org | null>(null);
   const [trust, setTrust] = useState<TrustOverview | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   const [form, setForm] = useState({
     name: "",
@@ -59,6 +62,7 @@ export default function NpcOrganizationManager() {
   async function load() {
     if (!token) return;
     setError(null);
+    setSuccess(null);
     setLoading(true);
     try {
       const res = await api.get<{ success: boolean; data: Org }>("/npc-organizations/me", token);
@@ -96,8 +100,10 @@ export default function NpcOrganizationManager() {
   }, [token, user]);
 
   async function submit() {
-    if (!token) return;
+    if (!token || submitting) return;
     setError(null);
+    setSuccess(null);
+    setSubmitting(true);
     const website = normalizeWebsite(form.website);
     try {
       if (isCreateMode) {
@@ -112,6 +118,7 @@ export default function NpcOrganizationManager() {
           token
         );
         setOrg(created.data);
+        setSuccess("Organization profile created successfully!");
       } else {
         const updated = await api.patch<{ success: boolean; data: Org }>(
           "/npc-organizations/me",
@@ -124,14 +131,20 @@ export default function NpcOrganizationManager() {
           token
         );
         setOrg(updated.data);
+        setSuccess("Organization profile updated successfully!");
       }
       const trustRes = await api.get<{ success: boolean; data: TrustOverview }>(
         "/npc-organizations/me/trust",
         token
       );
       setTrust(trustRes.data);
+      
+      // Clear success message after 5 seconds
+      setTimeout(() => setSuccess(null), 5000);
     } catch (e: any) {
       setError(String(e?.message || e));
+    } finally {
+      setSubmitting(false);
     }
   }
 
@@ -154,9 +167,21 @@ export default function NpcOrganizationManager() {
               Create and manage your organization identity.
             </p>
           </div>
-          <button className="text-xs md:text-sm px-3 py-2 rounded-lg border border-slate-600 text-slate-300 hover:bg-slate-700/50" onClick={load} disabled={loading}>
-            Refresh
-          </button>
+          <div className="flex items-center gap-2">
+            <Link
+              to="/dashboard"
+              className="text-xs md:text-sm px-3 py-2 rounded-lg border border-indigo-500/60 text-indigo-300 hover:bg-indigo-500/10 transition-colors"
+            >
+              ← Dashboard
+            </Link>
+            <button 
+              className="text-xs md:text-sm px-3 py-2 rounded-lg border border-slate-600 text-slate-300 hover:bg-slate-700/50" 
+              onClick={load} 
+              disabled={loading}
+            >
+              Refresh
+            </button>
+          </div>
         </div>
 
         <div className="rounded-2xl border border-purple-500/40 bg-slate-900/70 p-4 md:p-5 space-y-3">
@@ -188,10 +213,23 @@ export default function NpcOrganizationManager() {
                 value={form.description}
                 onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
               />
-              {error && <p className="text-rose-300 text-sm">{error}</p>}
+              {error && (
+                <div className="rounded-lg border border-red-500/60 bg-red-900/40 px-4 py-3 text-red-100 text-sm">
+                  ⚠️ {error}
+                </div>
+              )}
+              {success && (
+                <div className="rounded-lg border border-emerald-500/60 bg-emerald-900/40 px-4 py-3 text-emerald-100 text-sm">
+                  ✅ {success}
+                </div>
+              )}
               <div>
-                <button className="btn bg-purple-600 hover:bg-purple-700" onClick={submit} disabled={loading}>
-                  {isCreateMode ? "Create Profile" : "Update Profile"}
+                <button 
+                  className="btn bg-purple-600 hover:bg-purple-700 disabled:opacity-50" 
+                  onClick={submit} 
+                  disabled={loading || submitting || !form.name.trim()}
+                >
+                  {submitting ? "Saving..." : isCreateMode ? "Create Profile" : "Save Changes"}
                 </button>
               </div>
             </div>

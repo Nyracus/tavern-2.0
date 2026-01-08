@@ -24,7 +24,7 @@ export function useProfileCheck() {
           setHasProfile(!!res.data);
         } else if (user.role === "NPC") {
           const res = await api.get<{ success: boolean; data?: any }>(
-            "/npcs/me",
+            "/npc-organizations/me",
             token
           );
           setHasProfile(!!res.data);
@@ -48,4 +48,3 @@ export function useProfileCheck() {
 
   return { hasProfile, loading };
 }
-

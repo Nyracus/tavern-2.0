@@ -5,20 +5,20 @@ import { useAuth } from "../context/AuthContext";
 import { api } from "../lib/api";
 
 type ProfileForm = {
-  title: string;
-  summary: string;
-  organization?: string;
-  location?: string;
+  name: string;
+  description?: string;
+  domain?: string;
+  website?: string;
 };
 
 export default function CreateNPCProfile() {
   const { token, user } = useAuth();
   const navigate = useNavigate();
   const [form, setForm] = useState<ProfileForm>({
-    title: "",
-    summary: "",
-    organization: "",
-    location: "",
+    name: "",
+    description: "",
+    domain: "",
+    website: "",
   });
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -32,13 +32,18 @@ export default function CreateNPCProfile() {
 
     try {
       await api.post(
-        "/npcs/me/profile",
-        form,
+        "/npc-organizations/me",
+        {
+          name: form.name,
+          description: form.description || undefined,
+          domain: form.domain || undefined,
+          website: form.website || undefined,
+        },
         token
       );
       navigate("/dashboard");
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to create profile");
+      setError(err instanceof Error ? err.message : "Failed to create organization profile");
     } finally {
       setSubmitting(false);
     }
@@ -57,10 +62,10 @@ export default function CreateNPCProfile() {
       <div className="w-full max-w-2xl rounded-2xl border border-purple-500/40 bg-slate-900/90 shadow-[0_0_35px_rgba(147,51,234,0.35)] p-6 space-y-6">
         <div className="space-y-1 text-center">
           <h1 className="text-2xl font-extrabold tracking-wide text-purple-200">
-            🏛️ Create Your NPC Profile
+            🏛️ Create Your NPC Organization Profile
           </h1>
           <p className="text-sm text-slate-300">
-            Set up your profile to start posting quests and hiring adventurers.
+            Set up your organization profile to start posting quests and hiring adventurers.
           </p>
         </div>
 
@@ -73,51 +78,50 @@ export default function CreateNPCProfile() {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="text-xs font-semibold text-purple-200 uppercase tracking-wide">
-              Title *
+              Organization Name *
             </label>
             <input
               className="input bg-slate-950/70 border-slate-700 text-slate-100 w-full"
-              value={form.title}
-              onChange={(e) => setForm({ ...form, title: e.target.value })}
-              placeholder="e.g., Merchant, Town Mayor, Guild Master"
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              placeholder="e.g., Royal Guild, Merchant's Association"
               required
             />
           </div>
 
           <div>
             <label className="text-xs font-semibold text-purple-200 uppercase tracking-wide">
-              Summary *
+              Description (Optional)
             </label>
             <textarea
               className="input bg-slate-950/70 border-slate-700 text-slate-100 w-full min-h-[100px]"
-              value={form.summary}
-              onChange={(e) => setForm({ ...form, summary: e.target.value })}
-              placeholder="Describe your NPC and their role..."
-              required
+              value={form.description}
+              onChange={(e) => setForm({ ...form, description: e.target.value })}
+              placeholder="Describe your organization..."
             />
           </div>
 
           <div>
             <label className="text-xs font-semibold text-purple-200 uppercase tracking-wide">
-              Organization (Optional)
+              Domain (Optional)
             </label>
             <input
               className="input bg-slate-950/70 border-slate-700 text-slate-100 w-full"
-              value={form.organization}
-              onChange={(e) => setForm({ ...form, organization: e.target.value })}
-              placeholder="e.g., Royal Guild, Merchant's Association"
+              value={form.domain}
+              onChange={(e) => setForm({ ...form, domain: e.target.value })}
+              placeholder="e.g., Software, Art, Research"
             />
           </div>
 
           <div>
             <label className="text-xs font-semibold text-purple-200 uppercase tracking-wide">
-              Location (Optional)
+              Website (Optional)
             </label>
             <input
               className="input bg-slate-950/70 border-slate-700 text-slate-100 w-full"
-              value={form.location}
-              onChange={(e) => setForm({ ...form, location: e.target.value })}
-              placeholder="e.g., Capital City, Northern Outpost"
+              value={form.website}
+              onChange={(e) => setForm({ ...form, website: e.target.value })}
+              placeholder="e.g., https://example.com"
             />
           </div>
 
@@ -126,7 +130,7 @@ export default function CreateNPCProfile() {
             disabled={submitting}
             className="btn w-full bg-purple-600 hover:bg-purple-700 disabled:opacity-50"
           >
-            {submitting ? "Creating Profile..." : "Create Profile"}
+            {submitting ? "Creating Organization..." : "Create Organization Profile"}
           </button>
         </form>
       </div>

@@ -33,6 +33,11 @@ export class NpcOrganizationController {
       if (!req.userId) throw new AppError(401, 'Not authenticated');
       const parsed = createNpcOrganizationSchema.parse(req.body);
       const org = await npcOrganizationService.createForNpc(req.userId, parsed);
+      
+      // Mark onboarding complete for newly registered users
+      const { UserModel } = await import("../models/user.model");
+      await UserModel.findByIdAndUpdate(req.userId, { $set: { needsProfileSetup: false } }).exec();
+      
       res.status(201).json({ success: true, data: org });
     } catch (err) {
       next(err);

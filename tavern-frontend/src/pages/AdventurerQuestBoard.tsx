@@ -32,7 +32,6 @@ type Quest = {
 };
 
 type AdventurerProfile = {
-  level: number;
   xp?: number;
   rank?: string;
   class?: string;
@@ -250,7 +249,7 @@ export default function AdventurerQuestBoard() {
               Browse available quests and find your next adventure
               {profile && (
                 <span className="ml-2">
-                  | Level {profile.level} | Rank: <span className={getRankColor(profile.rank)}>{profile.rank || "F"}</span>
+                  | Rank: <span className={getRankColor(profile.rank)}>{profile.rank || "F"}</span>
                 </span>
               )}
             </p>

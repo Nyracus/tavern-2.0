@@ -12,6 +12,7 @@ export interface UserDocument extends Document {
   password: string;       // <-- merged from JS model
   gold?: number;          // Gold currency for adventurers
   needsProfileSetup?: boolean; // Only true for newly registered NPC/Adventurer until they create a profile
+  emailVerified?: boolean; // Email verification status
   // NPC-specific fields
   npcPriority?: number;   // Job posting priority (lower = higher priority, used for demotion)
   createdAt: Date;
@@ -45,6 +46,10 @@ const UserSchema = new Schema<UserDocument>(
     // Onboarding gate: only set true for newly registered NPC/Adventurer accounts.
     // Existing users won't have this field and will NOT be forced through onboarding.
     needsProfileSetup: {
+      type: Boolean,
+      default: false,
+    },
+    emailVerified: {
       type: Boolean,
       default: false,
     },

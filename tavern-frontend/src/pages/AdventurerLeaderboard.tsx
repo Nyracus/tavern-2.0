@@ -78,7 +78,7 @@ export default function AdventurerLeaderboard() {
               <span>#</span>
               <span>Title</span>
               <span>Class</span>
-              <span>Level</span>
+              <span>Rank</span>
               <span>XP</span>
               <span>Rank</span>
             </div>
@@ -122,10 +122,10 @@ export default function AdventurerLeaderboard() {
                     <span className="text-slate-200">{row.class}</span>
                   </div>
 
-                  {/* Level */}
+                  {/* Rank */}
                   <div className="flex items-center">
                     <span className="font-semibold text-slate-100">
-                      {row.level}
+                      {row.rank || "F"}
                     </span>
                   </div>
 
@@ -159,7 +159,7 @@ export default function AdventurerLeaderboard() {
         </div>
 
         <p className="mt-3 text-[11px] text-slate-500">
-          * Rankings are based on total XP, then level, then earliest entry in
+          * Rankings are based on total XP, then earliest entry in
           the guild records.
         </p>
       </div>

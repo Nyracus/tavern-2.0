@@ -510,7 +510,7 @@ export const getRecommendedQuests = async (
 
     const adventurerRank = profile.rank || "F";
     const adventurerXP = profile.xp || 0;
-    const adventurerLevel = profile.level || 1;
+    // Level removed - using rank instead
     const adventurerClass = (profile.class || "").toLowerCase();
 
     // Get all open quests
@@ -573,10 +573,12 @@ export const getRecommendedQuests = async (
         if (quest.difficulty === "Hard" && ["B", "A", "S"].includes(adventurerRank)) score += 0.1;
         if (quest.difficulty === "Epic" && ["S", "SS", "SSS"].includes(adventurerRank)) score += 0.1;
 
-        // Level-based bonus (higher level = better match for harder quests)
-        if (quest.difficulty === "Epic" && adventurerLevel >= 10) score += 0.1;
-        if (quest.difficulty === "Hard" && adventurerLevel >= 7) score += 0.05;
-        if (quest.difficulty === "Medium" && adventurerLevel >= 5) score += 0.05;
+        // Rank-based bonus (higher rank = better match for harder quests)
+        const rankOrder = ["F", "E", "D", "C", "B", "A", "S", "SS", "SSS"];
+        const rankIndex = rankOrder.indexOf(adventurerRank);
+        if (quest.difficulty === "Epic" && rankIndex >= rankOrder.indexOf("S")) score += 0.1;
+        if (quest.difficulty === "Hard" && rankIndex >= rankOrder.indexOf("B")) score += 0.05;
+        if (quest.difficulty === "Medium" && rankIndex >= rankOrder.indexOf("D")) score += 0.05;
       } else {
         // Quest is too easy or too hard
         const difficultyOrder = ["Easy", "Medium", "Hard", "Epic"];

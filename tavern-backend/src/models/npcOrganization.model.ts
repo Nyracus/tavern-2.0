@@ -9,6 +9,7 @@ export interface INpcOrganization extends Document {
   description?: string;
   domain?: string;            // e.g. "Software", "Art", "Research"
   website?: string;
+  logoUrl?: string;           // Logo image URL from Supabase Storage
   verified: boolean;
 
   // Trust metrics
@@ -33,6 +34,7 @@ const NpcOrganizationSchema = new Schema<INpcOrganization>(
     description: { type: String },
     domain: { type: String },
     website: { type: String },
+    logoUrl: { type: String },
     verified: { type: Boolean, default: false },
 
     trustScore: { type: Number, required: true, min: 0, max: 100, default: 50 },

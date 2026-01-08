@@ -25,6 +25,7 @@ import AdventurerChats from "./pages/AdventurerChats";
 import NPCChats from "./pages/NPCChats";
 import CreateAdventurerProfile from "./pages/CreateAdventurerProfile";
 import CreateNPCProfile from "./pages/CreateNPCProfile";
+import EditAdventurerProfile from "./pages/EditAdventurerProfile";
 import Onboarding from "./pages/Onboarding";
 import NPCOrganization from "./pages/NPCOrganization";
 
@@ -53,6 +54,22 @@ const router = createBrowserRouter([
     element: (
       <Protected roles={["ADVENTURER", "NPC"]}>
         <Onboarding />
+      </Protected>
+    ),
+  },
+  {
+    path: "/create-adventurer-profile",
+    element: (
+      <Protected roles={["ADVENTURER"]}>
+        <CreateAdventurerProfile />
+      </Protected>
+    ),
+  },
+  {
+    path: "/create-npc-profile",
+    element: (
+      <Protected roles={["NPC"]}>
+        <CreateNPCProfile />
       </Protected>
     ),
   },
@@ -190,6 +207,14 @@ const router = createBrowserRouter([
       <Protected roles={["NPC"]}>
         <CreateNPCProfile />
       </Protected>
+    ),
+  },
+  {
+    path: "/edit-adventurer-profile",
+    element: (
+      <ProfileProtected roles={["ADVENTURER"]}>
+        <EditAdventurerProfile />
+      </ProfileProtected>
     ),
   },
 ]);
