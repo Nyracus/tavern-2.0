@@ -15,7 +15,7 @@ services:
     env: docker
     dockerfilePath: ./tavern-backend/Dockerfile
     dockerContext: ./tavern-backend
-    plan: free  # Free tier - sleeps after 15 min inactivity
+    plan: starter
     region: oregon
     healthCheckPath: /api/health/live
     envVars:
@@ -44,7 +44,11 @@ services:
         sync: false  # Optional
       - key: SUPABASE_ANON_KEY
         sync: false  # Optional
-    # Free tier doesn't support scaling - removed
+    scaling:
+      minInstances: 1
+      maxInstances: 2  # Allow scaling if needed
+      targetCPUPercent: 70
+      targetMemoryPercent: 80
 
   # Frontend Static Site
   - type: web
