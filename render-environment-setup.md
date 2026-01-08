@@ -15,8 +15,9 @@ Go to each backend service → **Environment** tab → Add these:
 MONGO_URI=mongodb+srv://username:password@cluster.mongodb.net/tavern_db?retryWrites=true&w=majority
 
 # Redis (Auto-configured by Render via service links)
-# REDIS_CONNECTION_STRING - Auto-set from Render Redis service (includes password)
-# Note: Render provides connectionString which includes host, port, and password
+# REDIS_HOST - Auto-set from Render Redis service
+# REDIS_PORT - Auto-set from Render Redis service  
+# REDIS_PASSWORD - Auto-set from Render Redis service
 
 # JWT (IMPORTANT: Same secret for all backends!)
 # 1. Copy JWT_SECRET from tavern-backend-1
@@ -189,7 +190,9 @@ After setting variables:
 | Variable | Backend 1 | Backend 2 | Backend 3 | API Gateway | Frontend |
 |----------|-----------|-----------|-----------|-------------|----------|
 | MONGO_URI | ✅ Set | ✅ Set | ✅ Set | ❌ | ❌ |
-| REDIS_CONNECTION_STRING | ✅ Auto | ✅ Auto | ✅ Auto | ❌ | ❌ |
+| REDIS_HOST | ✅ Auto | ✅ Auto | ✅ Auto | ❌ | ❌ |
+| REDIS_PORT | ✅ Auto | ✅ Auto | ✅ Auto | ❌ | ❌ |
+| REDIS_PASSWORD | ✅ Auto | ✅ Auto | ✅ Auto | ❌ | ❌ |
 | JWT_SECRET | ✅ Set | ✅ Same | ✅ Same | ❌ | ❌ |
 | INSTANCE_ID | backend-1 | backend-2 | backend-3 | ❌ | ❌ |
 | FRONTEND_URL | ✅ Set | ✅ Set | ✅ Set | ❌ | ❌ |

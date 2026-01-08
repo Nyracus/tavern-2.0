@@ -119,8 +119,10 @@ NODE_ENV=production
 PORT=10000
 INSTANCE_ID=backend-1  # Unique per instance
 MONGO_URI=mongodb+srv://user:pass@cluster.mongodb.net/tavern_db
-REDIS_CONNECTION_STRING=<auto from Render>
-JWT_SECRET=<same for all - copy from backend-1>
+REDIS_HOST=<auto from Render>
+REDIS_PORT=<auto from Render>
+REDIS_PASSWORD=<auto from Render>
+JWT_SECRET=<same for all - auto-generated>
 JWT_EXPIRES_IN=7d
 FRONTEND_URL=https://tavern-frontend.onrender.com
 ```

@@ -114,7 +114,9 @@ For each backend instance (1, 2, 3):
    PORT=10000
    INSTANCE_ID=backend-1  # Change for each instance
    MONGO_URI=mongodb+srv://user:pass@cluster.mongodb.net/tavern_db
-   REDIS_CONNECTION_STRING=<auto from Redis service>
+   REDIS_HOST=<from Redis service>
+   REDIS_PORT=<from Redis service>
+   REDIS_PASSWORD=<from Redis service>
    REDIS_DB=0
    JWT_SECRET=<generate secure random string>
    JWT_EXPIRES_IN=7d
@@ -227,8 +229,10 @@ NODE_ENV=production
 PORT=10000
 INSTANCE_ID=backend-1  # Unique per instance
 MONGO_URI=mongodb+srv://...
-REDIS_CONNECTION_STRING=<auto from Render Redis>
-JWT_SECRET=<same for all instances - copy from backend-1>
+REDIS_HOST=<from Render Redis>
+REDIS_PORT=<from Render Redis>
+REDIS_PASSWORD=<from Render Redis>
+JWT_SECRET=<same for all instances>
 JWT_EXPIRES_IN=7d
 FRONTEND_URL=https://tavern-frontend.onrender.com
 ```

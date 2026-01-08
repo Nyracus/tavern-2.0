@@ -27,11 +27,21 @@ services:
         value: backend-1
       - key: MONGO_URI
         sync: false  # Set manually: mongodb+srv://user:pass@cluster.mongodb.net/tavern_db
-      - key: REDIS_CONNECTION_STRING
+      - key: REDIS_HOST
         fromService:
           type: redis
           name: tavern-redis
-          property: connectionString
+          property: host
+      - key: REDIS_PORT
+        fromService:
+          type: redis
+          name: tavern-redis
+          property: port
+      - key: REDIS_PASSWORD
+        fromService:
+          type: redis
+          name: tavern-redis
+          property: password
       - key: REDIS_DB
         value: 0
       - key: JWT_SECRET
@@ -46,9 +56,7 @@ services:
         sync: false  # Optional
     scaling:
       minInstances: 1
-      maxInstances: 2  # Allow scaling if needed
-      targetCPUPercent: 70
-      targetMemoryPercent: 80
+      maxInstances: 1  # Can increase for auto-scaling
 
   # Frontend Static Site
   - type: web
@@ -59,3 +67,4 @@ services:
     envVars:
       - key: VITE_API_URL
         value: https://tavern-backend.onrender.com/api  # Update with actual backend URL
+
