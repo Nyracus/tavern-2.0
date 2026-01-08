@@ -9,14 +9,24 @@ const cors = require('cors');
 const app = express();
 
 // Helper function to normalize backend URLs
-// Render's fromService.property.host returns just hostname, need to add https://
+// Render's fromService.property.host returns hostname, need to add https://
+// Also handles service names that need to be converted to full hostnames
 const normalizeBackendUrl = (url) => {
   if (!url) return null;
+  
   // If already has protocol, return as-is
   if (url.startsWith('http://') || url.startsWith('https://')) {
     return url;
   }
-  // Add https:// for Render deployments
+  
+  // If it's just a service name (no dots), convert to Render hostname format
+  // e.g., "tavern-backend-1" -> "tavern-backend-1.onrender.com"
+  if (!url.includes('.')) {
+    console.warn(`[Gateway] Service name detected: ${url}, converting to hostname`);
+    return `https://${url}.onrender.com`;
+  }
+  
+  // If it's a hostname without protocol, add https://
   return `https://${url}`;
 };
 
@@ -28,6 +38,37 @@ const rawBackends = [
 ].filter(Boolean);
 
 const backends = rawBackends.map(normalizeBackendUrl).filter(Boolean);
+
+// Validate backend URLs
+const invalidBackends = backends.filter(url => {
+  try {
+    const urlObj = new URL(url);
+    return !urlObj.hostname || (!urlObj.hostname.includes('.') && !urlObj.hostname.includes('localhost'));
+  } catch {
+    return true;
+  }
+});
+
+if (invalidBackends.length > 0) {
+  console.error('[Gateway] Invalid backend URLs detected:', invalidBackends);
+  console.error('[Gateway] URLs must be valid HTTP/HTTPS URLs with hostname');
+}
+
+// Log backend configuration for debugging
+if (backends.length > 0) {
+  console.log('[Gateway] Configured backend URLs:');
+  backends.forEach((url, i) => {
+    console.log(`  ${i + 1}. ${url}`);
+  });
+} else {
+  console.warn('[Gateway] No backend URLs configured! Using localhost fallback.');
+  console.warn('[Gateway] Set BACKEND_1_URL, BACKEND_2_URL, BACKEND_3_URL environment variables.');
+  console.warn('[Gateway] In Render, use fromService to reference backend services:');
+  console.warn('  fromService:');
+  console.warn('    type: web');
+  console.warn('    name: tavern-backend-1');
+  console.warn('    property: host');
+}
 
 // Fallback to localhost for development
 if (backends.length === 0) {
@@ -74,6 +115,12 @@ app.get('/health', (req, res) => {
     status: 'ok',
     gateway: 'tavern-api-gateway',
     backends: backends.length,
+    backendUrls: backends, // Include URLs for debugging
+    rawBackendEnvVars: {
+      BACKEND_1_URL: process.env.BACKEND_1_URL || 'not set',
+      BACKEND_2_URL: process.env.BACKEND_2_URL || 'not set',
+      BACKEND_3_URL: process.env.BACKEND_3_URL || 'not set',
+    },
     timestamp: new Date().toISOString(),
   });
 });
@@ -87,6 +134,8 @@ const apiProxy = createProxyMiddleware({
   router: (req) => {
     // Round-robin routing - called for each request
     const backend = getNextBackend();
+    // Store backend URL in request for error logging
+    req._gatewayBackend = backend;
     console.log(`[Gateway] Routing ${req.method} ${req.path} to ${backend}`);
     return backend;
   },
@@ -110,9 +159,11 @@ const apiProxy = createProxyMiddleware({
     },
     error: (err, req, res) => {
       console.error('[Gateway] Proxy error:', err.message);
+      console.error('[Gateway] Error code:', err.code);
       console.error('[Gateway] Request path:', req.path);
       console.error('[Gateway] Request method:', req.method);
       console.error('[Gateway] Available backends:', backends);
+      console.error('[Gateway] Attempted backend:', req._gatewayBackend || 'unknown');
       
       // Set CORS headers even on error
       if (!res.headersSent) {
@@ -120,12 +171,30 @@ const apiProxy = createProxyMiddleware({
         res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
         res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
         
-        if (err.code === 'ECONNREFUSED' || err.code === 'ETIMEDOUT' || err.code === 'ENOTFOUND') {
+        // Provide more helpful error messages
+        if (err.code === 'ENOTFOUND') {
           res.status(503).json({
             success: false,
-            message: 'Backend service unavailable or sleeping (free tier)',
+            message: 'Backend service hostname not found. Service may be sleeping (free tier) or URL misconfigured.',
             error: err.message,
             code: err.code,
+            hint: 'Check that BACKEND_1_URL, BACKEND_2_URL, BACKEND_3_URL are set correctly in Render environment variables.',
+          });
+        } else if (err.code === 'ECONNREFUSED') {
+          res.status(503).json({
+            success: false,
+            message: 'Backend service connection refused. Service may be sleeping (free tier).',
+            error: err.message,
+            code: err.code,
+            hint: 'Free tier services sleep after 15 minutes of inactivity. First request may take 30-60 seconds to wake up.',
+          });
+        } else if (err.code === 'ETIMEDOUT') {
+          res.status(503).json({
+            success: false,
+            message: 'Backend service request timeout. Service may be sleeping (free tier).',
+            error: err.message,
+            code: err.code,
+            hint: 'Free tier services take time to wake up. Please try again in a few seconds.',
           });
         } else {
           res.status(502).json({
