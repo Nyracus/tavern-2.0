@@ -18,8 +18,13 @@ export default function AdventurerStats() {
   useEffect(() => {
     if (token && user?.role === "ADVENTURER") {
       loadStats();
-      // Poll for gold updates every 5 seconds (more frequent for payment updates)
-      const interval = setInterval(loadStats, 5000);
+      // Poll for gold updates every 30 seconds (reduced from 5 seconds)
+      const interval = setInterval(() => {
+        // Only poll if tab is visible
+        if (!document.hidden) {
+          loadStats();
+        }
+      }, 30000); // 30 seconds instead of 5
       
       // Listen for payment notifications to refresh immediately
       const handlePaymentNotification = () => {
@@ -27,9 +32,18 @@ export default function AdventurerStats() {
       };
       window.addEventListener('paymentReceived', handlePaymentNotification);
       
+      // Also refresh when tab becomes visible
+      const handleVisibilityChange = () => {
+        if (!document.hidden) {
+          loadStats();
+        }
+      };
+      document.addEventListener('visibilitychange', handleVisibilityChange);
+      
       return () => {
         clearInterval(interval);
         window.removeEventListener('paymentReceived', handlePaymentNotification);
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
       };
     }
   }, [token, user]);

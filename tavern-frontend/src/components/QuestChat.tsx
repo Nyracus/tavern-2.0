@@ -29,11 +29,26 @@ export default function QuestChat({ questId, questTitle, onClose }: QuestChatPro
   useEffect(() => {
     if (token) {
       loadMessages();
-      // Poll for new messages every 3 seconds
+      // Poll for new messages every 10 seconds (reduced from 3 seconds)
       const interval = setInterval(() => {
-        loadMessages();
-      }, 3000);
-      return () => clearInterval(interval);
+        // Only poll if tab is visible
+        if (!document.hidden) {
+          loadMessages();
+        }
+      }, 10000); // 10 seconds instead of 3
+      
+      // Also refresh when tab becomes visible
+      const handleVisibilityChange = () => {
+        if (!document.hidden) {
+          loadMessages();
+        }
+      };
+      document.addEventListener('visibilitychange', handleVisibilityChange);
+      
+      return () => {
+        clearInterval(interval);
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
+      };
     }
   }, [token, questId]);
 

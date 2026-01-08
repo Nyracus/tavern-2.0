@@ -33,12 +33,26 @@ export default function NPCCompletions() {
     // Initial load
     loadQuests();
     
-    // Poll for new completions every 10 seconds
+    // Poll for new completions every 30 seconds (reduced from 10 seconds)
     const interval = setInterval(() => {
-      loadQuests(true); // Silent polling
-    }, 10000);
+      // Only poll if tab is visible
+      if (!document.hidden) {
+        loadQuests(true); // Silent polling
+      }
+    }, 30000); // 30 seconds instead of 10
     
-    return () => clearInterval(interval);
+    // Also refresh when tab becomes visible
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        loadQuests(true);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, [token]);
 
   const loadQuests = async (silent = false) => {

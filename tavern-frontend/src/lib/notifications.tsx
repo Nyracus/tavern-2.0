@@ -46,10 +46,15 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       return;
     }
 
+    // Don't fetch if tab is not visible (smart polling)
+    if (document.hidden) {
+      return;
+    }
+
     setLoading(true);
     try {
       const res = await api.get<{ success: boolean; notifications: Notification[]; unreadCount: number }>(
-        '/notifications?limit=50',
+        '/notifications?limit=20', // Reduced from 50 to 20
         token
       );
       const newNotifications = res.notifications || [];
@@ -77,12 +82,24 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     if (!token) return;
     
     fetchNotifications();
-    // Poll for new notifications every 15 seconds (reduced frequency to avoid rate limits)
+    // Poll for new notifications every 60 seconds (reduced frequency significantly)
     const interval = setInterval(() => {
       fetchNotifications();
-    }, 15000);
-    return () => clearInterval(interval);
-  }, [fetchNotifications, token]);
+    }, 60000); // 60 seconds instead of 15
+    
+    // Also fetch when tab becomes visible
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        fetchNotifications();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [token, fetchNotifications]);
 
   const markRead = async (id: string) => {
     if (!token) return;

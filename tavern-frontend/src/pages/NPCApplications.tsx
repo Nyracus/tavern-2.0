@@ -35,12 +35,26 @@ export default function NPCApplications() {
     // Initial load
     loadQuests();
     
-    // Poll for new applications every 5 seconds (silent polling)
+    // Poll for new applications every 20 seconds (reduced from 5 seconds)
     const interval = setInterval(() => {
-      loadQuests(true); // Silent polling - don't show loading state
-    }, 5000);
+      // Only poll if tab is visible
+      if (!document.hidden) {
+        loadQuests(true); // Silent polling - don't show loading state
+      }
+    }, 20000); // 20 seconds instead of 5
     
-    return () => clearInterval(interval);
+    // Also refresh when tab becomes visible
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        loadQuests(true);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, [token]);
 
   const loadQuests = async (silent = false) => {

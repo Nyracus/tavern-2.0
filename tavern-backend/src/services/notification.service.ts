@@ -36,7 +36,7 @@ export class NotificationService {
       filter.read = false;
     }
 
-    const limit = options?.limit || 50;
+    const limit = options?.limit || 20; // Reduced default from 50 to 20 for better performance
 
     const notifications = await NotificationModel.find(filter)
       .sort({ createdAt: -1 })

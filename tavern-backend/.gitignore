@@ -1,6 +1,37 @@
-node_modules
-.env
-npm-debug.log*
-.DS_Store
+# Dependencies
+node_modules/
+package-lock.json
+
+# Build outputs
 dist/
-/.env.backup
+build/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+server_start.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test results (keep HTML reports for viewing, but ignore coverage details)
+test-results/coverage/
+*.lcov
+
+# Keep test HTML reports visible
+!test-results/test-report.html
