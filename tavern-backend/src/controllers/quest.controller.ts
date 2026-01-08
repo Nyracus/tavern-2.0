@@ -42,7 +42,38 @@ export const createQuest = async (
 
     const { title, description, difficulty, rewardGold, deadline } = req.body;
 
-    // Create quest without escrow (NPCs don't need to escrow upfront)
+    // Validate rewardGold is provided
+    if (!rewardGold || rewardGold <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Quest must have a valid reward amount greater than 0",
+      });
+    }
+
+    // Check if NPC has sufficient gold for escrow
+    const { UserModel } = await import("../models/user.model");
+    const npc = await UserModel.findById(req.userId).exec();
+    if (!npc) {
+      return res.status(404).json({
+        success: false,
+        message: "NPC user not found",
+      });
+    }
+
+    const npcGold = npc.gold || 0;
+    if (npcGold < rewardGold) {
+      return res.status(400).json({
+        success: false,
+        message: `Insufficient gold. You need ${rewardGold} gold to create this quest, but you only have ${npcGold} gold.`,
+      });
+    }
+
+    // Deduct gold from NPC and deposit into escrow
+    npc.gold = npcGold - rewardGold;
+    await npc.save();
+
+    // Create quest with escrow
+    const now = new Date();
     const quest = await Quest.create({
       title,
       description,
@@ -51,7 +82,21 @@ export const createQuest = async (
       deadline,
       npcId: new Types.ObjectId(req.userId),
       status: "Open",
+      escrowedGold: rewardGold,
+      escrowDepositedAt: now,
     });
+
+    // Create escrow deposit transaction
+    const { transactionService } = await import("../services/transaction.service");
+    await transactionService.createTransaction(
+      String(quest._id),
+      "ESCROW_DEPOSIT",
+      rewardGold,
+      String(req.userId),
+      undefined, // toUserId: none (held in escrow)
+      `Escrow deposit for quest: ${title}`,
+      { questId: String(quest._id) }
+    );
 
     return res.status(201).json({ success: true, data: quest });
   } catch (err) {
@@ -432,6 +477,28 @@ export const deleteQuest = async (
         success: false,
         message: "Can only delete quests with status 'Open'",
       });
+    }
+
+    // Refund escrow to NPC if any gold was escrowed
+    if (quest.escrowedGold && quest.escrowedGold > 0) {
+      const { UserModel } = await import("../models/user.model");
+      const npc = await UserModel.findById(req.userId).exec();
+      if (npc) {
+        npc.gold = (npc.gold || 0) + quest.escrowedGold;
+        await npc.save();
+
+        // Create escrow refund transaction
+        const { transactionService } = await import("../services/transaction.service");
+        await transactionService.createTransaction(
+          String(quest._id),
+          "ESCROW_REFUND",
+          quest.escrowedGold,
+          undefined, // fromUserId: none (from escrow)
+          String(req.userId),
+          `Escrow refund for deleted quest: ${quest.title}`,
+          { questId: String(quest._id) }
+        );
+      }
     }
 
     await Quest.findByIdAndDelete(questId).exec();
@@ -874,10 +941,20 @@ export const payQuest = async (
         ? amount
         : quest.rewardGold || 0;
 
-    // Pay adventurer directly (no escrow system for NPCs)
+    // Verify escrow has sufficient funds
+    const escrowBalance = quest.escrowedGold || 0;
+    if (escrowBalance < paymentAmount) {
+      return res.status(400).json({
+        success: false,
+        message: `Insufficient escrow balance. Escrow has ${escrowBalance} gold, but payment requires ${paymentAmount} gold.`,
+      });
+    }
+
+    // Release gold from escrow to adventurer
     quest.status = "Paid";
     quest.paidAt = now;
     quest.paidGold = paymentAmount;
+    quest.escrowedGold = escrowBalance - paymentAmount; // Deduct from escrow
 
     // Award gold to adventurer
     if (quest.adventurerId) {
@@ -887,18 +964,18 @@ export const payQuest = async (
         const previousGold = adventurer.gold || 0;
         adventurer.gold = previousGold + paymentAmount;
         await adventurer.save();
-        console.log(`[PAYMENT] Awarded ${paymentAmount} gold to adventurer ${quest.adventurerId}. Previous: ${previousGold}, New: ${adventurer.gold}`);
+        console.log(`[PAYMENT] Released ${paymentAmount} gold from escrow to adventurer ${quest.adventurerId}. Previous: ${previousGold}, New: ${adventurer.gold}`);
 
-        // Create transaction record for payment
+        // Create transaction record for escrow release
         const { transactionService } = await import("../services/transaction.service");
         await transactionService.createTransaction(
           String(quest._id),
-          "ESCROW_RELEASE", // Keep transaction type for consistency, but it's just a payment now
+          "ESCROW_RELEASE",
           paymentAmount,
           String(quest.npcId),
           String(quest.adventurerId),
-          `Payment for quest: ${quest.title}`,
-          {}
+          `Escrow release for quest: ${quest.title}`,
+          { previousEscrowBalance: escrowBalance }
         );
 
         // Send payment notification to adventurer
@@ -1121,6 +1198,60 @@ export const rejectCompletion = async (
     }
 
     return res.json({ success: true, data: quest, message: "Completion rejected. Adventurer can resubmit or raise a conflict." });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// Get escrow balance for a quest (NPC, Adventurer, or Guild Master)
+export const getQuestEscrow = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    if (!req.userId) {
+      return res
+        .status(401)
+        .json({ success: false, message: "Unauthenticated" });
+    }
+
+    const { questId } = req.params;
+
+    const quest = await Quest.findById(questId).exec();
+    if (!quest) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Quest not found" });
+    }
+
+    // Check access: NPC, assigned adventurer, or guild master
+    const isNPC = quest.npcId.toString() === req.userId;
+    const isAdventurer = quest.adventurerId?.toString() === req.userId;
+    const isGuildMaster = req.userRole === "GUILD_MASTER";
+
+    if (!isNPC && !isAdventurer && !isGuildMaster) {
+      return res.status(403).json({
+        success: false,
+        message: "Not authorized to view this quest's escrow",
+      });
+    }
+
+    // Get escrow balance from transaction service
+    const { transactionService } = await import("../services/transaction.service");
+    const escrowBalance = await transactionService.getQuestEscrowBalance(questId);
+
+    return res.json({
+      success: true,
+      data: {
+        questId: String(quest._id),
+        questTitle: quest.title,
+        escrowedGold: quest.escrowedGold || 0,
+        calculatedBalance: escrowBalance,
+        rewardGold: quest.rewardGold || 0,
+        escrowDepositedAt: quest.escrowDepositedAt,
+      },
+    });
   } catch (err) {
     next(err);
   }

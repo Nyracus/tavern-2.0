@@ -14,6 +14,7 @@ import {
   deleteQuest,
   getRecommendedQuests,
   cancelQuest,
+  getQuestEscrow,
 } from "../controllers/quest.controller";
 import { enforceWorkloadLimit } from "../controllers/workload.controller";
 import { uploadQuestReport, uploadMiddleware } from "../controllers/storage.controller";
@@ -28,6 +29,13 @@ router.get(
   verifyToken,
   authorizeRole("ADVENTURER"),
   getRecommendedQuests
+);
+
+// Quest escrow balance (accessible to NPC, Adventurer, or Guild Master)
+router.get(
+  "/quests/:questId/escrow",
+  verifyToken,
+  getQuestEscrow
 );
 
 // NPC employer: create and manage quests

@@ -107,15 +107,27 @@ export class ConflictService {
     await conflict.save();
 
     if (resolution === "ADVENTURER_WIN") {
-      // Adventurer wins: 150% payment + their escrow returned
+      // Adventurer wins: 150% payment from quest escrow + their conflict escrow returned
       const paymentAmount = rewardGold * 1.5; // 150%
-      const escrowReturn = conflict.escrowedAmount; // Adventurer's escrow returned
+      const escrowReturn = conflict.escrowedAmount; // Adventurer's conflict escrow returned
 
-      // Pay adventurer bonus + return their escrow
+      // Check if quest has sufficient escrow for 150% payment
+      const questEscrow = quest.escrowedGold || 0;
+      if (questEscrow < paymentAmount) {
+        // If quest escrow insufficient, NPC must pay difference
+        const shortfall = paymentAmount - questEscrow;
+        const npc = await UserModel.findById(quest.npcId).exec();
+        if (npc) {
+          npc.gold = (npc.gold || 0) - shortfall;
+          await npc.save();
+        }
+      }
+
+      // Pay adventurer bonus + return their conflict escrow
       if (quest.adventurerId) {
         const adventurer = await UserModel.findById(quest.adventurerId).exec();
         if (adventurer) {
-          // Payment: 150% of reward + escrow returned
+          // Payment: 150% of reward + conflict escrow returned
           adventurer.gold = (adventurer.gold || 0) + paymentAmount + escrowReturn;
           await adventurer.save();
         }
@@ -127,8 +139,8 @@ export class ConflictService {
           paymentAmount,
           String(quest.npcId),
           String(quest.adventurerId),
-          `Conflict resolution: Adventurer win - 150% payment`,
-          { conflictId: String(conflict._id), resolution: "ADVENTURER_WIN" }
+          `Conflict resolution: Adventurer win - 150% payment from quest escrow`,
+          { conflictId: String(conflict._id), resolution: "ADVENTURER_WIN", fromEscrow: true }
         );
 
         if (escrowReturn > 0) {
@@ -138,11 +150,14 @@ export class ConflictService {
             escrowReturn,
             undefined,
             String(quest.adventurerId),
-            `Conflict resolution: Escrowed amount returned to adventurer`,
+            `Conflict resolution: Conflict escrow returned to adventurer`,
             { conflictId: String(conflict._id), resolution: "ADVENTURER_WIN" }
           );
         }
       }
+
+      // Update quest escrow balance (deduct payment)
+      quest.escrowedGold = Math.max(0, questEscrow - paymentAmount);
 
       // Demote NPC: Increase priority (lower priority = lower in job posting queue)
       const npc = await UserModel.findById(quest.npcId).exec();
@@ -158,9 +173,9 @@ export class ConflictService {
       quest.hasConflict = false;
       await quest.save();
     } else if (resolution === "NPC_WIN") {
-      // NPC wins: Escrow forfeited, adventurer demoted
+      // NPC wins: Adventurer's conflict escrow forfeited, quest escrow refunded to NPC
       
-      // Escrow is forfeited (not returned)
+      // Adventurer's conflict escrow is forfeited (not returned)
       // Create transaction record for forfeiture
       await transactionService.createTransaction(
         String(quest._id),
@@ -168,9 +183,33 @@ export class ConflictService {
         conflict.escrowedAmount,
         String(quest.adventurerId),
         undefined, // Escrow goes to system/guild (not returned)
-        `Conflict resolution: NPC win - Escrow forfeited`,
+        `Conflict resolution: NPC win - Adventurer's conflict escrow forfeited`,
         { conflictId: String(conflict._id), resolution: "NPC_WIN", forfeited: true }
       );
+
+      // Refund quest escrow to NPC since adventurer failed
+      const questEscrow = quest.escrowedGold || 0;
+      if (questEscrow > 0) {
+        const npc = await UserModel.findById(quest.npcId).exec();
+        if (npc) {
+          npc.gold = (npc.gold || 0) + questEscrow;
+          await npc.save();
+
+          // Create transaction for quest escrow refund
+          await transactionService.createTransaction(
+            String(quest._id),
+            "ESCROW_REFUND",
+            questEscrow,
+            undefined,
+            String(quest.npcId),
+            `Conflict resolution: Quest escrow refunded to NPC (NPC win)`,
+            { conflictId: String(conflict._id), resolution: "NPC_WIN" }
+          );
+        }
+
+        // Clear quest escrow
+        quest.escrowedGold = 0;
+      }
 
       // Demote Adventurer: Lower rank by one level
       const profile = await AdventurerProfileModel.findOne({ userId: String(quest.adventurerId) }).exec();
