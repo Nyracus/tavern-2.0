@@ -22,53 +22,129 @@ const start = async () => {
     console.error('⚠️  Server will start but database operations will fail.');
   }
   
-  // Connect to Redis (with retry logic)
+  // Connect to Redis (with aggressive retry logic)
   attemptRedisConnection(); // Mark that we're attempting connection
-  try {
-    // Attempt to connect Redis (works for both lazy and eager connect)
-    const redisAvailable = await isRedisAvailable();
-    
-    if (redisAvailable) {
-      console.log(`✅ Redis connected (Instance: ${INSTANCE_ID})`);
-    } else {
-      // Try one more time with explicit connect attempt
-      try {
-        const status = redisClient.status;
-        if (status === 'wait' || status === 'close' || !status) {
-          await redisClient.connect();
-          // Wait up to 2 seconds for connection
-          let attempts = 0;
-          while (redisClient.status !== 'ready' && redisClient.status !== 'end' && attempts < 20) {
-            await new Promise(resolve => setTimeout(resolve, 100));
-            attempts++;
+  
+  let redisConnected = false;
+  const maxRetries = 5;
+  
+  // Wait a bit for Redis to be ready (in case it's starting up)
+  await new Promise(resolve => setTimeout(resolve, 500));
+  
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      // Check current status
+      const status = redisClient.status;
+      
+      // If already ready, verify with ping
+      if (status === 'ready') {
+        try {
+          await redisClient.ping();
+          redisConnected = true;
+          console.log(`✅ Redis connected (Instance: ${INSTANCE_ID})`);
+          break;
+        } catch {
+          // Ping failed, continue to reconnect
+        }
+      }
+      
+      // If connecting, wait for it
+      if (status === 'connecting') {
+        for (let i = 0; i < 30; i++) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+          if (redisClient.status === 'ready') {
+            try {
+              await redisClient.ping();
+              redisConnected = true;
+              console.log(`✅ Redis connected (Instance: ${INSTANCE_ID})`);
+              break;
+            } catch {
+              // Continue
+            }
           }
         }
-        
-        if (redisClient.status === 'ready') {
+        if (redisConnected) break;
+      }
+      
+      // Try to connect if not connected
+      if (status === 'wait' || status === 'close' || status === undefined || status === 'end') {
+        try {
+          // Create new connection if ended
+          if (status === 'end') {
+            // Can't reconnect ended client, but try ping anyway
+            await redisClient.ping();
+          } else {
+            await redisClient.connect();
+          }
+          
+          // Wait for connection
+          for (let i = 0; i < 50; i++) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+            if (redisClient.status === 'ready') {
+              try {
+                await redisClient.ping();
+                redisConnected = true;
+                console.log(`✅ Redis connected (Instance: ${INSTANCE_ID})`);
+                break;
+              } catch {
+                // Continue waiting
+              }
+            }
+            if (redisClient.status === 'end') {
+              break; // Connection failed
+            }
+          }
+          if (redisConnected) break;
+        } catch (connectErr) {
+          // Connection failed, will retry
+          if (attempt === maxRetries) {
+            const errorMsg = connectErr instanceof Error ? connectErr.message : String(connectErr);
+            if (errorMsg.includes('ECONNREFUSED')) {
+              console.warn('⚠️ Redis not available, caching disabled');
+              console.warn('   Redis server is not running.');
+              console.warn('   Quick start: docker run -d --name tavern-redis -p 6379:6379 redis:7-alpine');
+              console.warn('   Or run: cd tavern-backend && .\\start-redis.ps1');
+            } else if (errorMsg.includes('ENOTFOUND') || errorMsg.includes('getaddrinfo')) {
+              console.warn('⚠️ Redis not available, caching disabled');
+              console.warn('   Cannot resolve Redis host. Check REDIS_HOST or REDIS_CONNECTION_STRING');
+            } else {
+              console.warn('⚠️ Redis not available, caching disabled');
+              console.warn(`   Connection error: ${errorMsg}`);
+            }
+          }
+        }
+      }
+      
+      // Final check with ping
+      if (!redisConnected && attempt === maxRetries) {
+        try {
           await redisClient.ping();
+          redisConnected = true;
           console.log(`✅ Redis connected (Instance: ${INSTANCE_ID})`);
-        } else {
-          console.warn('⚠️ Redis not available, caching disabled');
-          console.warn('   Make sure Redis is running on localhost:6379 or set REDIS_CONNECTION_STRING');
+        } catch {
+          // Final attempt failed
         }
-      } catch (connectErr) {
-        console.warn('⚠️ Redis not available, caching disabled');
-        const errorMsg = connectErr instanceof Error ? connectErr.message : String(connectErr);
-        if (errorMsg.includes('ECONNREFUSED')) {
-          console.warn('   Redis server is not running. Start Redis with: redis-server');
-        } else if (errorMsg.includes('ENOTFOUND') || errorMsg.includes('getaddrinfo')) {
-          console.warn('   Cannot resolve Redis host. Check REDIS_HOST or REDIS_CONNECTION_STRING');
-        } else {
-          console.warn(`   Connection error: ${errorMsg}`);
-        }
-        console.warn('   To install Redis: https://redis.io/docs/getting-started/');
+      }
+      
+    } catch (err) {
+      // Error in check, continue to retry
+      if (attempt === maxRetries) {
+        const errorMsg = err instanceof Error ? err.message : String(err);
+        console.warn('⚠️ Redis connection failed, caching disabled');
+        console.warn(`   Error: ${errorMsg}`);
       }
     }
-  } catch (err) {
-    console.warn('⚠️ Redis connection failed, caching disabled');
-    const errorMsg = err instanceof Error ? err.message : String(err);
-    console.warn(`   Error: ${errorMsg}`);
-    console.warn('   Make sure Redis is running on localhost:6379 or set REDIS_CONNECTION_STRING');
+    
+    // Wait before retry (except on last attempt)
+    if (attempt < maxRetries && !redisConnected) {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+  }
+  
+  if (!redisConnected) {
+    console.warn('⚠️ Redis not available, caching disabled');
+    console.warn('   The app will continue without caching. Install/start Redis for better performance.');
+    console.warn('   See: tavern-backend/start-redis.ps1 for help starting Redis');
   }
 
   app.listen(PORT, () => {

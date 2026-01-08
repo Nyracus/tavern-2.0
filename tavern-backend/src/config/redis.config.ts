@@ -25,10 +25,15 @@ const redisOptions = {
   },
   maxRetriesPerRequest: 3,
   enableReadyCheck: true,
-  lazyConnect: true, // Always lazy connect, we'll connect explicitly when needed
+  lazyConnect: false, // Connect immediately (changed from true for better reliability)
   connectTimeout: 5000, // 5 second timeout
   enableOfflineQueue: false, // Don't queue commands when offline
   showFriendlyErrorStack: !isProduction,
+  // Auto-reconnect settings
+  reconnectOnError: (err: Error) => {
+    const targetError = 'READONLY';
+    return err.message.includes(targetError);
+  },
 };
 
 export const redisClient = REDIS_CONNECTION_STRING
@@ -90,18 +95,26 @@ export const isRedisAvailable = async (): Promise<boolean> => {
     
     // If already ready, just ping to verify
     if (status === 'ready') {
-      await redisClient.ping();
-      return true;
+      try {
+        await redisClient.ping();
+        return true;
+      } catch {
+        return false;
+      }
     }
     
     // If connecting, wait a bit and check again
     if (status === 'connecting') {
-      // Wait up to 2 seconds for connection
-      for (let i = 0; i < 20; i++) {
+      // Wait up to 3 seconds for connection
+      for (let i = 0; i < 30; i++) {
         await new Promise(resolve => setTimeout(resolve, 100));
         if (redisClient.status === 'ready') {
-          await redisClient.ping();
-          return true;
+          try {
+            await redisClient.ping();
+            return true;
+          } catch {
+            return false;
+          }
         }
         if (redisClient.status === 'end' || redisClient.status === 'close') {
           return false;
@@ -111,19 +124,14 @@ export const isRedisAvailable = async (): Promise<boolean> => {
     }
     
     // If in wait state (lazy connect) or not connected, try to connect
-    if (status === 'wait' || status === 'close' || !status) {
+    if (status === 'wait' || status === 'close' || status === undefined) {
       connectionAttempted = true; // Mark that we're attempting
       try {
-        // Attempt to connect (will do nothing if already connecting)
-        if (status === 'wait') {
-          await redisClient.connect();
-        } else {
-          // Try to reconnect if closed
-          await redisClient.connect();
-        }
+        // Force connect
+        await redisClient.connect();
         
-        // Wait for connection with timeout
-        const timeout = 3000; // 3 seconds
+        // Wait for connection with timeout (5 seconds)
+        const timeout = 5000;
         const start = Date.now();
         while (redisClient.status !== 'ready' && redisClient.status !== 'end') {
           if (Date.now() - start > timeout) {
@@ -133,11 +141,15 @@ export const isRedisAvailable = async (): Promise<boolean> => {
         }
         
         if (redisClient.status === 'ready') {
-          await redisClient.ping();
-          return true;
+          try {
+            await redisClient.ping();
+            return true;
+          } catch {
+            return false;
+          }
         }
       } catch (connectErr) {
-        // Connection failed
+        // Connection failed - return false but don't throw
         return false;
       }
     }
@@ -147,7 +159,7 @@ export const isRedisAvailable = async (): Promise<boolean> => {
     try {
       await redisClient.ping();
       return true;
-    } catch (pingErr) {
+    } catch {
       return false;
     }
   } catch (err) {

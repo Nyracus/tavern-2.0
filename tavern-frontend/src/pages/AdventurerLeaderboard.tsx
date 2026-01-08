@@ -41,12 +41,18 @@ export default function AdventurerLeaderboard() {
   if (error) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-950 to-black text-slate-100 flex items-center justify-center">
-        <p className="text-red-400 text-sm">{error}</p>
+        <div className="text-center space-y-2">
+          <p className="text-red-400 text-sm font-semibold">⚠️ Error Loading Leaderboard</p>
+          <p className="text-red-300 text-xs">{error}</p>
+        </div>
       </div>
     );
   }
 
-  if (!data || data.items.length === 0) {
+  // Safely extract items with multiple fallbacks
+  const items = (data?.items && Array.isArray(data.items)) ? data.items : [];
+
+  if (items.length === 0) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-950 to-black text-slate-100 flex items-center justify-center">
         <p className="text-slate-300 text-sm">
@@ -85,7 +91,7 @@ export default function AdventurerLeaderboard() {
 
           {/* Parchment-like body */}
           <div className="bg-gradient-to-b from-stone-900/70 via-stone-900/80 to-stone-950/90">
-            {data.items.map((row) => {
+            {items.map((row) => {
               const highlight =
                 row.position === 1
                   ? "bg-amber-500/10"

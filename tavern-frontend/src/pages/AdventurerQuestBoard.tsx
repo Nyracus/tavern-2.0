@@ -4,6 +4,7 @@ import { useAuth } from "../context/AuthContext";
 import { api } from "../lib/api";
 import { Link } from "react-router-dom";
 import QuestChat from "../components/QuestChat";
+import WorkloadErrorModal from "../components/WorkloadErrorModal";
 
 type QuestDifficulty = "Easy" | "Medium" | "Hard" | "Epic";
 type QuestStatus = "Open" | "Applied" | "Accepted" | "Completed" | "Paid" | "Cancelled";
@@ -48,6 +49,7 @@ export default function AdventurerQuestBoard() {
   const [applyNote, setApplyNote] = useState("");
   const [showApplyForm, setShowApplyForm] = useState(false);
   const [applying, setApplying] = useState(false);
+  const [showWorkloadError, setShowWorkloadError] = useState(false);
   const [profile, setProfile] = useState<AdventurerProfile | null>(null);
   const [chatQuest, setChatQuest] = useState<Quest | null>(null);
   
@@ -105,29 +107,41 @@ export default function AdventurerQuestBoard() {
         token
       );
       
+      // Safely extract quest data
+      const questsData = (res?.data && Array.isArray(res.data)) ? res.data : [];
+      
       // Load recommended quests (with ranking) - only if no search/filters
       if (!searchQuery && difficultyFilter.length === 0 && !classFilter && !minReward && !maxReward) {
-        const recommendedRes = await api.get<{ success: boolean; data: Quest[] }>(
-          "/quests/recommended",
-          token
-        ).catch(() => ({ success: true, data: [] }));
-        
-        // Transform recommended quests too
-        const transformedRecommended = (recommendedRes.data || []).map((quest: any) => {
-          const npcName = quest.npcId?.displayName || quest.npcId?.username || "Unknown NPC";
-          return {
-            ...quest,
-            npcId: typeof quest.npcId === "object" ? quest.npcId._id || quest.npcId : quest.npcId,
-            npcName,
-          };
-        });
-        setRecommendedQuests(transformedRecommended);
+        try {
+          const recommendedRes = await api.get<{ success: boolean; data: Quest[] }>(
+            "/quests/recommended",
+            token
+          );
+          
+          // Transform recommended quests too
+          const recommendedData = (recommendedRes?.data && Array.isArray(recommendedRes.data)) 
+            ? recommendedRes.data 
+            : [];
+          
+          const transformedRecommended = recommendedData.map((quest: any) => {
+            const npcName = quest.npcId?.displayName || quest.npcId?.username || "Unknown NPC";
+            return {
+              ...quest,
+              npcId: typeof quest.npcId === "object" ? quest.npcId._id || quest.npcId : quest.npcId,
+              npcName,
+            };
+          });
+          setRecommendedQuests(transformedRecommended);
+        } catch (err) {
+          // Recommended quests failed, just set empty
+          setRecommendedQuests([]);
+        }
       } else {
         setRecommendedQuests([]);
       }
 
       // Transform quests to extract NPC names from populated npcId
-      const transformedQuests = res.data.map((quest: any) => {
+      const transformedQuests = questsData.map((quest: any) => {
         const npcName = quest.npcId?.displayName || quest.npcId?.username || "Unknown NPC";
         return {
           ...quest,
@@ -152,8 +166,8 @@ export default function AdventurerQuestBoard() {
         };
         
         const keywords = classKeywords[classFilter] || [];
-        filteredQuests = res.data.filter(quest => {
-          const questText = `${quest.title} ${quest.description}`.toLowerCase();
+        filteredQuests = transformedQuests.filter(quest => {
+          const questText = `${quest.title || ''} ${quest.description || ''}`.toLowerCase();
           return keywords.some(keyword => questText.includes(keyword));
         });
       }
@@ -192,7 +206,38 @@ export default function AdventurerQuestBoard() {
       // Reload quests to update the UI
       await loadQuests();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to apply to quest");
+      let errorMessage = "Failed to apply to quest";
+      
+      // Try to extract error message from different error formats
+      if (err instanceof Error) {
+        errorMessage = err.message;
+        
+        // Try to parse JSON error response
+        try {
+          const parsed = JSON.parse(errorMessage);
+          if (parsed.message) {
+            errorMessage = parsed.message;
+          }
+        } catch {
+          // Not JSON, use message as-is
+        }
+      } else if (typeof err === 'string') {
+        errorMessage = err;
+      } else if (err && typeof err === 'object' && 'message' in err) {
+        errorMessage = String(err.message);
+      }
+      
+      // Check if it's a workload error (case-insensitive)
+      const isWorkloadError = errorMessage.toLowerCase().includes("too many active quests") ||
+                              errorMessage.toLowerCase().includes("workload") ||
+                              errorMessage.toLowerCase().includes("complete existing ones");
+      
+      if (isWorkloadError) {
+        setShowWorkloadError(true);
+        // Don't set error state for workload errors, show popup instead
+      } else {
+        setError(errorMessage);
+      }
     } finally {
       setApplying(false);
     }
@@ -235,7 +280,9 @@ export default function AdventurerQuestBoard() {
     return <div className="min-h-screen bg-slate-900 text-slate-100 p-8">Access denied. Adventurer only.</div>;
   }
 
-  const displayQuests = filter === "recommended" ? recommendedQuests : quests.filter(q => filter === "open" ? q.status === "Open" : true);
+  const displayQuests = filter === "recommended" 
+    ? (recommendedQuests || []) 
+    : (quests || []).filter(q => filter === "open" ? q.status === "Open" : true);
 
   return (
     <div className="min-h-screen bg-linear-to-b from-slate-900 via-slate-950 to-black text-slate-100">
@@ -410,7 +457,7 @@ export default function AdventurerQuestBoard() {
                 : "border-transparent text-slate-400 hover:text-slate-200"
             }`}
           >
-            📜 All Open ({quests.filter(q => q.status === "Open").length})
+            📜 All Open ({(quests || []).filter(q => q.status === "Open").length})
           </button>
           <button
             onClick={() => setFilter("all")}
@@ -420,7 +467,7 @@ export default function AdventurerQuestBoard() {
                 : "border-transparent text-slate-400 hover:text-slate-200"
             }`}
           >
-            🌐 All Quests ({quests.length})
+            🌐 All Quests ({(quests || []).length})
           </button>
         </div>
 
@@ -607,6 +654,12 @@ export default function AdventurerQuestBoard() {
             onClose={() => setChatQuest(null)}
           />
         )}
+
+        {/* Workload Error Modal */}
+        <WorkloadErrorModal
+          isOpen={showWorkloadError}
+          onClose={() => setShowWorkloadError(false)}
+        />
       </div>
     </div>
   );

@@ -27,13 +27,31 @@ export function useAdventurerLeaderboard(limit = 20) {
     (async () => {
       try {
         setLoading(true);
-        const res = await api.get<LeaderboardResponse>(
+        setError(null);
+        const res = await api.get<any>(
           `/leaderboard/adventurers?limit=${limit}`
         );
-        setData(res);
-        setError(null);
+        
+        // Backend returns: { success: true, items: [...] }
+        // Handle response safely
+        let items: LeaderItem[] = [];
+        
+        if (res) {
+          if (Array.isArray(res.items)) {
+            items = res.items;
+          } else if (Array.isArray(res.data)) {
+            items = res.data;
+          } else if (Array.isArray(res)) {
+            // Direct array response
+            items = res;
+          }
+        }
+        
+        setData({ success: true, items });
       } catch (e: unknown) {
-        setError(e instanceof Error ? e.message : "Failed to load leaderboard");
+        const errorMsg = e instanceof Error ? e.message : "Failed to load leaderboard";
+        setError(errorMsg);
+        setData({ success: false, items: [] });
       } finally {
         setLoading(false);
       }
