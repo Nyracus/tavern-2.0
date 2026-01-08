@@ -39,25 +39,12 @@ export class DeadlineCheckerService {
    */
   async checkDeadlines() {
     try {
-      // Check if MongoDB is connected before attempting to query
-      const mongoose = await import('mongoose');
-      if (mongoose.default.connection.readyState !== 1) {
-        console.warn("⚠️  MongoDB not connected, skipping deadline check");
-        return;
-      }
-
       const anomalies = await anomalyService.scanDeadlineAnomalies();
       if (anomalies.length > 0) {
         console.log(`⚠️  Found ${anomalies.length} deadline anomalies`);
       }
     } catch (err) {
-      // Only log non-MongoDB-connection errors
-      const errorMessage = err instanceof Error ? err.message : String(err);
-      if (!errorMessage.includes('buffering timed out') && !errorMessage.includes('MongooseError')) {
-        console.error("Error checking deadlines:", err);
-      } else {
-        console.warn("⚠️  MongoDB connection issue, deadline check skipped");
-      }
+      console.error("Error checking deadlines:", err);
     }
   }
 }
