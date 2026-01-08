@@ -3,7 +3,6 @@ import { AppError } from "../middleware/error.middleware";
 import { UserModel, IUser } from "../models/user.model";
 import { RegisterInput, LoginInput } from "../schemas/auth.schema";
 import { signJwt } from "../config/jwt.config";
-import { npcOrganizationService } from "./npcOrganization.service";
 
 export class AuthService {
   async register(data: RegisterInput) {
@@ -22,10 +21,6 @@ export class AuthService {
 
     const hash = await bcrypt.hash(data.password, 10);
 
-    // Validate email format (basic validation)
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    const isValidEmail = emailRegex.test(data.email);
-
     const user = await UserModel.create({
       email: data.email,
       username: data.username,
@@ -35,7 +30,6 @@ export class AuthService {
       // Only NEW NPC/ADVENTURER must create a profile before seeing dashboard.
       // Existing users won't have this field set, so they are not forced through onboarding.
       needsProfileSetup: (data.role || "ADVENTURER") !== "GUILD_MASTER",
-      emailVerified: isValidEmail, // Set verified=true if email format is valid
       password: hash,
     });
 
@@ -98,36 +92,9 @@ export class AuthService {
       role: u.role,
       gold: u.gold || 0, // Include gold in public user data
       needsProfileSetup: Boolean(u.needsProfileSetup),
-      emailVerified: Boolean(u.emailVerified),
       createdAt: u.createdAt,
       updatedAt: u.updatedAt,
     };
-  }
-
-  async verifyEmail(userId: string): Promise<void> {
-    const user = await UserModel.findByIdAndUpdate(
-      userId,
-      { $set: { emailVerified: true } },
-      { new: true }
-    ).exec();
-    
-    if (!user) {
-      throw new AppError(404, 'User not found');
-    }
-
-    // If user is NPC, update their organization's verified status and trust score
-    if (user.role === 'NPC') {
-      try {
-        const org = await npcOrganizationService.getMyOrganization(String(user._id));
-        if (org) {
-          // Update verified status and recalculate trust score
-          await npcOrganizationService.getTrustOverview(String(org._id));
-        }
-      } catch (err) {
-        // Organization might not exist yet, that's okay
-        console.log('No organization found for user, skipping organization update');
-      }
-    }
   }
 }
 

@@ -1,6 +1,5 @@
 // src/middleware/rateLimit.ts
 import rateLimit from 'express-rate-limit';
-import { redisClient, isRedisAvailable } from '../config/redis.config';
 
 const windowMs =
   Number(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000; // 15 minutes

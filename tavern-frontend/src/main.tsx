@@ -27,7 +27,6 @@ import CreateAdventurerProfile from "./pages/CreateAdventurerProfile";
 import CreateNPCProfile from "./pages/CreateNPCProfile";
 import Onboarding from "./pages/Onboarding";
 import NPCOrganization from "./pages/NPCOrganization";
-import EditAdventurerProfile from "./pages/EditAdventurerProfile";
 
 const router = createBrowserRouter([
   // public routes
@@ -191,14 +190,6 @@ const router = createBrowserRouter([
       <Protected roles={["NPC"]}>
         <CreateNPCProfile />
       </Protected>
-    ),
-  },
-  {
-    path: "/adventurer/profile",
-    element: (
-      <ProfileProtected roles={["ADVENTURER"]}>
-        <EditAdventurerProfile />
-      </ProfileProtected>
     ),
   },
 ]);

@@ -19,22 +19,6 @@ const upload = multer({
   },
 });
 
-// Configure multer for image upload (logos)
-const uploadImage = multer({
-  storage: multer.memoryStorage(),
-  limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB limit for images
-  },
-  fileFilter: (req, file, cb) => {
-    const allowedMimes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
-    if (allowedMimes.includes(file.mimetype)) {
-      cb(null, true);
-    } else {
-      cb(new Error('Only image files are allowed (jpg, jpeg, png, gif, webp, svg)'));
-    }
-  },
-});
-
 export const uploadQuestReport = async (
   req: AuthRequest,
   res: Response,
@@ -84,5 +68,4 @@ export const uploadQuestReport = async (
 
 // Export multer middleware for use in routes
 export const uploadMiddleware = upload.single('file');
-export const uploadImageMiddleware = uploadImage.single('logo');
 

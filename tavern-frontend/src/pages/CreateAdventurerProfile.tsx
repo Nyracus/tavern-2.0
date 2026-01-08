@@ -38,8 +38,6 @@ const CLASSES = [
 export default function CreateAdventurerProfile() {
   const { token, user } = useAuth();
   const navigate = useNavigate();
-  const INITIAL_STAT_POINTS = 8;
-  const [availablePoints, setAvailablePoints] = useState(INITIAL_STAT_POINTS);
   const [form, setForm] = useState<ProfileForm>({
     title: "",
     summary: "",
@@ -58,57 +56,20 @@ export default function CreateAdventurerProfile() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const handleStatChange = (stat: keyof Attributes, newValue: number) => {
-    // Enforce minimum of 10 and maximum of 20
-    if (newValue < 10 || newValue > 20) {
-      return;
-    }
-    
-    const currentValue = form.attributes[stat];
-    const diff = newValue - currentValue;
-    
-    // Check if we have enough points (when increasing) or if we're reducing (freeing points)
-    const newAvailablePoints = availablePoints - diff;
-    if (newAvailablePoints < 0 || newAvailablePoints > INITIAL_STAT_POINTS) {
-      return; // Invalid point distribution
-    }
-    
-    setForm({
-      ...form,
-      attributes: {
-        ...form.attributes,
-        [stat]: newValue,
-      },
-    });
-    
-    // Update available points
-    setAvailablePoints(newAvailablePoints);
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!token) return;
-
-    // Validate all stats are at least 10
-    const minStat = Math.min(...Object.values(form.attributes));
-    if (minStat < 10) {
-      setError("All stats must be at least 10");
-      return;
-    }
-    
-    // Validate all points are used
-    if (availablePoints !== 0) {
-      setError(`Please distribute all ${INITIAL_STAT_POINTS} stat points. ${availablePoints} remaining.`);
-      return;
-    }
 
     setError(null);
     setSubmitting(true);
 
     try {
       await api.post(
-        "/adventurers/me",
-        form,
+        "/adventurers/me/profile",
+        {
+          ...form,
+          level: 1,
+        },
         token
       );
       navigate("/dashboard");
@@ -135,7 +96,7 @@ export default function CreateAdventurerProfile() {
             ⚔️ Create Your Adventurer Profile
           </h1>
           <p className="text-sm text-slate-300">
-            Set up your character to begin your journey. All stats start at 10 (minimum). You have {INITIAL_STAT_POINTS} points to distribute across your stats. Rank starts at F.
+            Set up your character to begin your journey. All stats start at 10, rank starts at F.
           </p>
         </div>
 
@@ -215,18 +176,9 @@ export default function CreateAdventurerProfile() {
           </div>
 
           <div className="rounded-lg border border-slate-700 bg-slate-950/50 p-4">
-            <div className="flex items-center justify-between mb-3">
-              <label className="text-xs font-semibold text-amber-200 uppercase tracking-wide">
-                Attributes (Min: 10 each)
-              </label>
-              <div className={`text-sm font-bold px-3 py-1 rounded ${
-                availablePoints === 0 
-                  ? "bg-emerald-500/20 text-emerald-200" 
-                  : "bg-amber-500/20 text-amber-200"
-              }`}>
-                Points Remaining: {availablePoints} / {INITIAL_STAT_POINTS}
-              </div>
-            </div>
+            <label className="text-xs font-semibold text-amber-200 uppercase tracking-wide mb-3 block">
+              Attributes (All start at 10)
+            </label>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
               {Object.entries(form.attributes).map(([key, value]) => (
                 <div key={key}>
@@ -235,28 +187,26 @@ export default function CreateAdventurerProfile() {
                   </label>
                   <input
                     type="number"
-                    min="10"
+                    min="1"
                     max="20"
                     className="input bg-slate-800 border-slate-600 text-slate-100 w-full"
                     value={value}
-                    onChange={(e) => {
-                      const newValue = Number(e.target.value);
-                      if (newValue >= 10) {
-                        handleStatChange(key as keyof Attributes, newValue);
-                      }
-                    }}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        attributes: {
+                          ...form.attributes,
+                          [key]: Number(e.target.value),
+                        },
+                      })
+                    }
                     required
                   />
                 </div>
               ))}
             </div>
             <p className="text-xs text-slate-400 mt-2">
-              All attributes start at 10. You have {INITIAL_STAT_POINTS} points to distribute. Minimum stat value is 10.
-              {availablePoints > 0 && (
-                <span className="text-amber-300 font-semibold block mt-1">
-                  ⚠️ You must use all {INITIAL_STAT_POINTS} points before creating your profile.
-                </span>
-              )}
+              All attributes are set to 10 by default. You can adjust them now, but remember you'll gain stat points as you level up!
             </p>
           </div>
 

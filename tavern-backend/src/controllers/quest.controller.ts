@@ -102,7 +102,6 @@ export const listQuests = async (
     }
 
     // Search filter (title or description)
-    // Note: NPC name search will be done after populating npcId
     if (search) {
       const searchRegex = { $regex: String(search), $options: "i" };
       filter.$or = [
@@ -125,9 +124,8 @@ export const listQuests = async (
     }
 
     const quests = await query.exec();
-    
-    // Transform quests to include npcName and filter by NPC name if search includes it
-    let transformed = quests.map((quest: any) => {
+    // Transform quests to include npcName
+    const transformed = quests.map((quest: any) => {
       const questObj = quest.toObject();
       const npcName = questObj.npcId?.displayName || questObj.npcId?.username || "Unknown NPC";
       return {
@@ -135,22 +133,6 @@ export const listQuests = async (
         npcName,
       };
     });
-    
-    // Filter by NPC name if search is provided (post-population filtering)
-    if (search) {
-      const searchLower = String(search).toLowerCase();
-      transformed = transformed.filter((quest: any) => {
-        // Check title, description, and NPC name
-        const titleMatch = quest.title?.toLowerCase().includes(searchLower);
-        const descMatch = quest.description?.toLowerCase().includes(searchLower);
-        const npcNameMatch = quest.npcName?.toLowerCase().includes(searchLower);
-        const npcUsernameMatch = quest.npcId?.username?.toLowerCase().includes(searchLower);
-        const npcDisplayNameMatch = quest.npcId?.displayName?.toLowerCase().includes(searchLower);
-        
-        return titleMatch || descMatch || npcNameMatch || npcUsernameMatch || npcDisplayNameMatch;
-      });
-    }
-    
     return res.json({ success: true, data: transformed });
   } catch (err) {
     next(err);
@@ -528,6 +510,7 @@ export const getRecommendedQuests = async (
 
     const adventurerRank = profile.rank || "F";
     const adventurerXP = profile.xp || 0;
+    const adventurerLevel = profile.level || 1;
     const adventurerClass = (profile.class || "").toLowerCase();
 
     // Get all open quests
@@ -590,10 +573,10 @@ export const getRecommendedQuests = async (
         if (quest.difficulty === "Hard" && ["B", "A", "S"].includes(adventurerRank)) score += 0.1;
         if (quest.difficulty === "Epic" && ["S", "SS", "SSS"].includes(adventurerRank)) score += 0.1;
 
-        // XP-based bonus (higher XP = better match for harder quests)
-        if (quest.difficulty === "Epic" && adventurerXP >= 1000) score += 0.1;
-        if (quest.difficulty === "Hard" && adventurerXP >= 700) score += 0.05;
-        if (quest.difficulty === "Medium" && adventurerXP >= 400) score += 0.05;
+        // Level-based bonus (higher level = better match for harder quests)
+        if (quest.difficulty === "Epic" && adventurerLevel >= 10) score += 0.1;
+        if (quest.difficulty === "Hard" && adventurerLevel >= 7) score += 0.05;
+        if (quest.difficulty === "Medium" && adventurerLevel >= 5) score += 0.05;
       } else {
         // Quest is too easy or too hard
         const difficultyOrder = ["Easy", "Medium", "Hard", "Epic"];

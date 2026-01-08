@@ -12,7 +12,6 @@ import { AuthRequest } from "../middleware/auth.middleware";
 import { AdventurerProfileModel } from "../models/adventurerProfile.model";
 import { AnomalyModel } from "../models/anomaly.model";
 import { Types } from "mongoose";
-import { storageService } from "../services/storage.service";
 
 // Helper: compute rank from xp
 const calculateRank = (xp: number): string => {
@@ -27,6 +26,11 @@ const calculateRank = (xp: number): string => {
   return "F";
 };
 
+// Helper: calculate level from XP (1 level per 100 XP)
+const calculateLevel = (xp: number): number => {
+  return Math.floor(xp / 100) + 1;
+};
+
 // Helper used by quest.controller to award XP
 export const addXP = async (userId: string, earnedXP: number) => {
   const profile = await AdventurerProfileModel.findOne({ userId });
@@ -37,21 +41,18 @@ export const addXP = async (userId: string, earnedXP: number) => {
   // use `any` so TS doesn't complain about xp/rank not being in the interface yet
   const p: any = profile;
   const currentXp = p.xp ?? 0;
-  const currentRank = p.rank ?? "F";
+  const currentLevel = p.level ?? 1;
   const newXp = currentXp + earnedXP;
-  const newRank = calculateRank(newXp);
+  const newLevel = calculateLevel(newXp);
 
   p.xp = newXp;
-  p.rank = newRank;
+  p.rank = calculateRank(newXp);
+  p.level = newLevel;
 
-  // Grant stat points for rank ups (1 point per rank gained)
-  const rankOrder = ["F", "E", "D", "C", "B", "A", "S", "SS", "SSS"];
-  const currentRankIndex = rankOrder.indexOf(currentRank);
-  const newRankIndex = rankOrder.indexOf(newRank);
-  const ranksGained = newRankIndex - currentRankIndex;
-  
-  if (ranksGained > 0) {
-    p.availableStatPoints = (p.availableStatPoints ?? 0) + ranksGained;
+  // Grant stat points for level ups (1 point per level gained)
+  const levelsGained = newLevel - currentLevel;
+  if (levelsGained > 0) {
+    p.availableStatPoints = (p.availableStatPoints ?? 0) + levelsGained;
   }
 
   await profile.save();
@@ -274,47 +275,6 @@ export class AdventurerProfileController {
         data: profile,
         message: `+1 ${stat} allocated! ${p.availableStatPoints} stat point(s) remaining.`
       });
-    } catch (err) {
-      next(err);
-    }
-  }
-
-  async uploadLogo(req: AuthRequest, res: Response, next: NextFunction) {
-    try {
-      if (!req.userId) {
-        throw new AppError(401, "Not authenticated");
-      }
-
-      const file = req.file;
-      if (!file) {
-        return res.status(400).json({
-          success: false,
-          message: "No logo file uploaded",
-        });
-      }
-
-      // Get existing profile to delete old logo if exists
-      const existingProfile = await adventurerProfileService.getMyProfile(req.userId);
-      if (existingProfile?.logoUrl) {
-        await storageService.deleteLogo(existingProfile.logoUrl).catch(() => {
-          // Ignore deletion errors
-        });
-      }
-
-      // Upload new logo
-      const logoUrl = await storageService.uploadLogo(
-        file.buffer,
-        req.userId,
-        "adventurer",
-        file.originalname
-      );
-
-      // Update profile with logo URL
-      const profile = await adventurerProfileService.updateProfileForUser(req.userId, {
-        logoUrl,
-      });
-
-      res.json({ success: true, data: profile });
     } catch (err) {
       next(err);
     }

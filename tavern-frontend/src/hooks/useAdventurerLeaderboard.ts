@@ -9,6 +9,7 @@ type LeaderItem = {
   displayName?: string;
   title: string;
   class: string;
+  level: number;
   xp: number;
   rank: string;
 };

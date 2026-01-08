@@ -17,47 +17,24 @@ import {
 } from "../controllers/quest.controller";
 import { enforceWorkloadLimit } from "../controllers/workload.controller";
 import { uploadQuestReport, uploadMiddleware } from "../controllers/storage.controller";
-import { cacheMiddleware } from "../middleware/cache.middleware";
-import { invalidateCache, invalidateQuestCache } from "../middleware/cacheInvalidation.middleware";
 
 const router = Router();
 
-// Public / shared quest browsing (cached for 2 minutes)
-router.get(
-  "/quests",
-  verifyToken,
-  cacheMiddleware({
-    ttl: 120, // 2 minutes
-    prefix: 'quests',
-    tags: ['quests'],
-    skipCache: (req) => {
-      // Skip cache if there are search/filter params (dynamic queries)
-      return !!(req.query.search || req.query.difficulty || req.query.minReward || req.query.maxReward);
-    },
-  }),
-  listQuests
-);
-
-// Quest recommendations for adventurers (cached for 5 minutes, user-specific)
+// Public / shared quest browsing
+router.get("/quests", verifyToken, listQuests);
+// Quest recommendations for adventurers
 router.get(
   "/quests/recommended",
   verifyToken,
   authorizeRole("ADVENTURER"),
-  cacheMiddleware({
-    ttl: 300, // 5 minutes
-    prefix: 'recommended',
-    tags: ['quests', 'recommended'],
-    varyBy: ['headers.authorization'], // Cache per user
-  }),
   getRecommendedQuests
 );
 
-// NPC employer: create and manage quests (invalidate cache on create)
+// NPC employer: create and manage quests
 router.post(
   "/quests",
   verifyToken,
   authorizeRole("NPC"),
-  invalidateQuestCache(),
   createQuest
 );
 router.get(
@@ -70,36 +47,36 @@ router.patch(
   "/quests/:questId",
   verifyToken,
   authorizeRole("NPC"),
-  invalidateQuestCache(),
   updateQuest
 );
 router.delete(
   "/quests/:questId",
   verifyToken,
   authorizeRole("NPC"),
-  invalidateQuestCache(),
   deleteQuest
 );
 router.post(
   "/quests/:questId/applications/:applicationId/decision",
   verifyToken,
   authorizeRole("NPC"),
-  invalidateQuestCache(),
   decideApplication
 );
 router.post(
   "/quests/:questId/pay",
   verifyToken,
   authorizeRole("NPC"),
-  invalidateQuestCache(),
-  invalidateCache({ tags: ['leaderboard'] }), // Leaderboard changes when quest is paid
   payQuest
 );
 router.post(
   "/quests/:questId/reject-completion",
   verifyToken,
   authorizeRole("NPC"),
-  invalidateQuestCache(),
+  rejectCompletion
+);
+router.post(
+  "/quests/:questId/reject-completion",
+  verifyToken,
+  authorizeRole("NPC"),
   rejectCompletion
 );
 
@@ -115,21 +92,18 @@ router.post(
   verifyToken,
   authorizeRole("ADVENTURER"),
   enforceWorkloadLimit,
-  invalidateQuestCache(),
   applyToQuest
 );
 router.post(
   "/quests/:questId/submit-completion",
   verifyToken,
   authorizeRole("ADVENTURER"),
-  invalidateQuestCache(),
   submitCompletion
 );
 router.post(
   "/quests/:questId/cancel",
   verifyToken,
   authorizeRole("ADVENTURER"),
-  invalidateQuestCache(),
   cancelQuest
 );
 

@@ -13,13 +13,9 @@ import conflictRoutes from "./conflict.routes";
 import transactionRoutes from "./transaction.routes";
 import npcProfileRoutes from "./npcProfile.routes";
 import npcOrganizationRoutes from "./npcOrganization.routes";
-import healthRoutes from "./health.routes";
 
 
 const router = Router();
-
-// Health check routes (no auth, no rate limiting)
-router.use(healthRoutes);
 
 router.get("/ping", (req, res) => {
   res.json({ message: "🏰 Tavern backend is alive!" });
@@ -27,6 +23,8 @@ router.get("/ping", (req, res) => {
 
 router.use("/auth", authRoutes);
 router.use("/users", userRoutes);
+router.use("/", adventurerProfileRoutes);
+router.use("/", questRoutes);
 router.use("/", adventurerProfileRoutes);
 router.use("/", questRoutes);
 router.use("/", workloadRoutes);

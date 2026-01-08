@@ -48,39 +48,15 @@ class NpcOrganizationService {
       throw new AppError(409, 'Organization profile already exists for this NPC');
     }
 
-    // Set verified status based on user's email verification
-    const verified = Boolean(user.emailVerified);
-    
-    // Calculate initial trust score (higher if email is verified)
-    const baseTrustScore = verified ? 60 : 50;
-    const trustScore = baseTrustScore;
+    const trustScore = 50;
     const trustTier = computeTrustTier(trustScore);
 
     const org = await NpcOrganizationModel.create({
       userId,
       ...data,
-      verified,
       trustScore,
       trustTier,
     });
-
-    // Send verification email if email is not verified
-    if (!verified && user.email) {
-      const { emailService } = await import('./email.service');
-      await emailService.sendEmail(
-        user.email,
-        'Verify Your NPC Organization Email',
-        `
-          <h2>Verify Your Email</h2>
-          <p>Thank you for creating your NPC organization profile!</p>
-          <p>To verify your email and increase your trust score, please click the link below:</p>
-          <p><a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/verify-email?token=PLACEHOLDER&userId=${userId}">Verify Email</a></p>
-          <p>Once verified, your trust score will increase and your organization will be marked as verified.</p>
-        `
-      ).catch(err => {
-        console.error('Failed to send verification email:', err);
-      });
-    }
 
     return org;
   }
@@ -171,47 +147,28 @@ class NpcOrganizationService {
       .exec();
 
     const total = quests.length;
-    // Completed quests include both 'Completed' and 'Paid' status
-    const completed = quests.filter((q: any) => q.status === 'Completed' || q.status === 'Paid').length;
+    const completed = quests.filter((q: any) => q.status === 'Completed').length;
     const cancelled = quests.filter((q: any) => q.status === 'Cancelled').length;
 
-    // Gold spent: sum rewards for paid quests (status = 'Paid')
+    // Gold spent: sum rewards for completed quests
     const totalGoldSpent = quests
-      .filter((q: any) => q.status === 'Paid')
+      .filter((q: any) => q.status === 'Completed')
       .reduce((sum: number, q: any) => sum + (Number(q.rewardGold) || 0), 0);
 
-    // completionRate: among finished quests only (Completed + Paid + Cancelled)
+    // completionRate: among finished quests only (Completed + Cancelled)
     const finished = completed + cancelled;
     const completionRate = finished === 0 ? 0 : round2((completed / finished) * 100);
 
     // disputes not implemented yet
     const disputeRate = 0;
 
-    // Get user's email verification status
-    const user = await UserModel.findById(org.userId).select('emailVerified').lean<any>();
-    const emailVerified = Boolean(user?.emailVerified);
-    
-    // Update organization verified status if email is verified
-    if (emailVerified && !org.verified) {
-      await NpcOrganizationModel.findByIdAndUpdate(org._id, { $set: { verified: true } }).exec();
-      org.verified = true;
-    }
-    
-    // Trust score formula: base score + completion rate bonus - cancelled penalty + verification bonus
-    const baseScore = org.verified ? 60 : 50; // Higher base if verified
+    // basic trust score formula
     const trustScore = clamp(
-      Math.round(baseScore + completionRate * 0.4 - cancelled * 2 + (org.verified ? 5 : 0)),
+      Math.round(50 + completionRate * 0.4 - cancelled * 2),
       0,
       100
     );
     const trustTier = computeTrustTier(trustScore);
-    
-    // Update trust score if it changed
-    if (Math.abs(org.trustScore - trustScore) > 1) {
-      await NpcOrganizationModel.findByIdAndUpdate(org._id, { 
-        $set: { trustScore, trustTier } 
-      }).exec();
-    }
 
     let summary =
       trustTier === 'HIGH'

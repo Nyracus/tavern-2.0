@@ -19,6 +19,5 @@ router.post(
 );
 
 router.get("/me", verifyToken, authController.me);
-router.post("/verify-email", verifyToken, authController.verifyEmail);
 
 export default router;

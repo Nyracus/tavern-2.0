@@ -1,6 +1,5 @@
 // src/pages/_NpcOrganizationManager.tsx
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
 import { api } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 
@@ -11,7 +10,6 @@ type Org = {
   description?: string;
   domain?: string;
   website?: string;
-  logoUrl?: string;
   verified: boolean;
   trustScore: number;
   trustTier: "LOW" | "MEDIUM" | "HIGH";
@@ -48,11 +46,6 @@ export default function NpcOrganizationManager() {
   const [org, setOrg] = useState<Org | null>(null);
   const [trust, setTrust] = useState<TrustOverview | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-  const [uploadingLogo, setUploadingLogo] = useState(false);
-  const [logoFile, setLogoFile] = useState<File | null>(null);
-  const [logoPreview, setLogoPreview] = useState<string | null>(null);
 
   const [form, setForm] = useState({
     name: "",
@@ -103,10 +96,8 @@ export default function NpcOrganizationManager() {
   }, [token, user]);
 
   async function submit() {
-    if (!token || submitting) return;
+    if (!token) return;
     setError(null);
-    setSuccess(null);
-    setSubmitting(true);
     const website = normalizeWebsite(form.website);
     try {
       if (isCreateMode) {
@@ -121,7 +112,6 @@ export default function NpcOrganizationManager() {
           token
         );
         setOrg(created.data);
-        setSuccess("Organization profile created successfully! A verification email has been sent to your registered email address.");
       } else {
         const updated = await api.patch<{ success: boolean; data: Org }>(
           "/npc-organizations/me",
@@ -134,82 +124,14 @@ export default function NpcOrganizationManager() {
           token
         );
         setOrg(updated.data);
-        setSuccess("Organization profile updated successfully!");
       }
       const trustRes = await api.get<{ success: boolean; data: TrustOverview }>(
         "/npc-organizations/me/trust",
         token
       );
       setTrust(trustRes.data);
-      
-      // Clear success message after 5 seconds
-      setTimeout(() => setSuccess(null), 5000);
     } catch (e: any) {
       setError(String(e?.message || e));
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      // Validate file type
-      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
-      if (!allowedTypes.includes(file.type)) {
-        setError('Only image files are allowed (jpg, jpeg, png, gif, webp, svg)');
-        return;
-      }
-      // Validate file size (5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        setError('Logo file size must be less than 5MB');
-        return;
-      }
-      setLogoFile(file);
-      // Create preview
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setLogoPreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  async function uploadLogo() {
-    if (!token || !logoFile || uploadingLogo) return;
-    setError(null);
-    setUploadingLogo(true);
-    
-    try {
-      const formData = new FormData();
-      formData.append('logo', logoFile);
-
-      const BASE = import.meta.env.VITE_API_URL as string;
-      const response = await fetch(`${BASE}/npc-organizations/me/logo`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-        body: formData,
-      });
-
-      const result = await response.json();
-      
-      if (!response.ok || !result.success) {
-        throw new Error(result.message || 'Failed to upload logo');
-      }
-
-      setSuccess('Logo uploaded successfully!');
-      setLogoFile(null);
-      setLogoPreview(null);
-      await load(); // Reload organization to get updated logo URL
-      
-      // Clear success message after 5 seconds
-      setTimeout(() => setSuccess(null), 5000);
-    } catch (e: any) {
-      setError(String(e?.message || e));
-    } finally {
-      setUploadingLogo(false);
     }
   }
 
@@ -232,21 +154,9 @@ export default function NpcOrganizationManager() {
               Create and manage your organization identity.
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <Link
-              to="/dashboard"
-              className="text-xs md:text-sm px-3 py-2 rounded-lg border border-indigo-500/60 text-indigo-300 hover:bg-indigo-500/10 transition-colors"
-            >
-              ← Dashboard
-            </Link>
-            <button 
-              className="text-xs md:text-sm px-3 py-2 rounded-lg border border-slate-600 text-slate-300 hover:bg-slate-700/50" 
-              onClick={load} 
-              disabled={loading}
-            >
-              Refresh
-            </button>
-          </div>
+          <button className="text-xs md:text-sm px-3 py-2 rounded-lg border border-slate-600 text-slate-300 hover:bg-slate-700/50" onClick={load} disabled={loading}>
+            Refresh
+          </button>
         </div>
 
         <div className="rounded-2xl border border-purple-500/40 bg-slate-900/70 p-4 md:p-5 space-y-3">
@@ -278,89 +188,10 @@ export default function NpcOrganizationManager() {
                 value={form.description}
                 onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
               />
-              
-              {/* Logo Upload */}
-              <div className="border-t border-slate-700 pt-4 mt-2">
-                <h3 className="text-sm font-semibold text-slate-300 mb-3">🖼️ Organization Logo</h3>
-                <div className="flex flex-col md:flex-row items-start gap-4">
-                  {/* Current Logo or Preview */}
-                  <div className="flex-shrink-0">
-                    {(logoPreview || org?.logoUrl) && (
-                      <div className="w-32 h-32 rounded-lg border border-slate-700 bg-slate-950 overflow-hidden">
-                        <img
-                          src={logoPreview || org?.logoUrl || ''}
-                          alt="Logo preview"
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                    )}
-                    {!logoPreview && !org?.logoUrl && (
-                      <div className="w-32 h-32 rounded-lg border border-slate-700 bg-slate-950 flex items-center justify-center text-slate-500 text-sm">
-                        No logo
-                      </div>
-                    )}
-                  </div>
-                  
-                  {/* Upload Controls */}
-                  <div className="flex-1 space-y-2">
-                    <input
-                      type="file"
-                      accept="image/jpeg,image/jpg,image/png,image/gif,image/webp,image/svg+xml"
-                      onChange={handleLogoChange}
-                      className="hidden"
-                      id="org-logo-upload"
-                    />
-                    <label
-                      htmlFor="org-logo-upload"
-                      className="inline-block text-xs md:text-sm px-4 py-2 rounded-lg border border-purple-500/60 text-purple-300 hover:bg-purple-500/10 cursor-pointer transition-colors"
-                    >
-                      {logoFile ? 'Change Logo' : 'Upload Logo'}
-                    </label>
-                    {logoFile && (
-                      <div className="flex items-center gap-2">
-                        <button
-                          className="btn bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-sm px-4 py-2"
-                          onClick={uploadLogo}
-                          disabled={uploadingLogo}
-                        >
-                          {uploadingLogo ? "Uploading..." : "Save Logo"}
-                        </button>
-                        <button
-                          className="text-xs md:text-sm px-3 py-2 rounded-lg border border-slate-600 text-slate-300 hover:bg-slate-700/50"
-                          onClick={() => {
-                            setLogoFile(null);
-                            setLogoPreview(null);
-                          }}
-                          disabled={uploadingLogo}
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    )}
-                    <p className="text-xs text-slate-400">
-                      Recommended: Square image, max 5MB (jpg, png, gif, webp, svg)
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {error && (
-                <div className="rounded-lg border border-red-500/60 bg-red-900/40 px-4 py-3 text-red-100 text-sm">
-                  ⚠️ {error}
-                </div>
-              )}
-              {success && (
-                <div className="rounded-lg border border-emerald-500/60 bg-emerald-900/40 px-4 py-3 text-emerald-100 text-sm">
-                  ✅ {success}
-                </div>
-              )}
+              {error && <p className="text-rose-300 text-sm">{error}</p>}
               <div>
-                <button 
-                  className="btn bg-purple-600 hover:bg-purple-700 disabled:opacity-50" 
-                  onClick={submit} 
-                  disabled={loading || submitting}
-                >
-                  {submitting ? "Saving..." : isCreateMode ? "Create Profile" : "Update Profile"}
+                <button className="btn bg-purple-600 hover:bg-purple-700" onClick={submit} disabled={loading}>
+                  {isCreateMode ? "Create Profile" : "Update Profile"}
                 </button>
               </div>
             </div>

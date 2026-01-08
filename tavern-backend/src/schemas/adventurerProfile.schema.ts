@@ -2,12 +2,12 @@
 import { z } from 'zod';
 
 const attributesSchema = z.object({
-  strength: z.number().int().min(10).max(20),
-  dexterity: z.number().int().min(10).max(20),
-  intelligence: z.number().int().min(10).max(20),
-  charisma: z.number().int().min(10).max(20),
-  vitality: z.number().int().min(10).max(20),
-  luck: z.number().int().min(10).max(20),
+  strength: z.number().int().min(1).max(20),
+  dexterity: z.number().int().min(1).max(20),
+  intelligence: z.number().int().min(1).max(20),
+  charisma: z.number().int().min(1).max(20),
+  vitality: z.number().int().min(1).max(20),
+  luck: z.number().int().min(1).max(20),
 });
 
 export const adventurerSkillSchema = z.object({
@@ -22,6 +22,7 @@ export const createAdventurerProfileSchema = z.object({
   title: z.string().min(1),
   summary: z.string().min(1),
   class: z.string().min(1),
+  level: z.number().int().min(1),
 
   race: z.string().optional(),
   background: z.string().optional(),

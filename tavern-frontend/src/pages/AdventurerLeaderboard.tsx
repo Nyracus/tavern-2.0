@@ -74,10 +74,11 @@ export default function AdventurerLeaderboard() {
         <div className="rounded-3xl border border-amber-700/60 bg-gradient-to-b from-slate-900/90 via-slate-900/95 to-slate-950 shadow-[0_0_40px_rgba(0,0,0,0.8)] overflow-hidden">
           {/* Table header styled like a wooden beam */}
           <div className="bg-gradient-to-r from-amber-900 via-amber-950 to-amber-900 border-b border-amber-700/80">
-            <div className="grid grid-cols-5 gap-2 px-4 py-3 text-xs md:text-sm font-semibold text-amber-100">
+            <div className="grid grid-cols-6 gap-2 px-4 py-3 text-xs md:text-sm font-semibold text-amber-100">
               <span>#</span>
               <span>Title</span>
               <span>Class</span>
+              <span>Level</span>
               <span>XP</span>
               <span>Rank</span>
             </div>
@@ -96,7 +97,7 @@ export default function AdventurerLeaderboard() {
               return (
                 <div
                   key={row.userId}
-                  className={`grid grid-cols-5 gap-2 px-4 py-3 text-xs md:text-sm border-b border-slate-800/70 ${highlight}`}
+                  className={`grid grid-cols-6 gap-2 px-4 py-3 text-xs md:text-sm border-b border-slate-800/70 ${highlight}`}
                 >
                   {/* Position + icon */}
                   <div className="flex items-center gap-2 font-semibold text-slate-100">
@@ -119,6 +120,13 @@ export default function AdventurerLeaderboard() {
                   {/* Class */}
                   <div className="flex items-center">
                     <span className="text-slate-200">{row.class}</span>
+                  </div>
+
+                  {/* Level */}
+                  <div className="flex items-center">
+                    <span className="font-semibold text-slate-100">
+                      {row.level}
+                    </span>
                   </div>
 
                   {/* XP */}
@@ -151,7 +159,7 @@ export default function AdventurerLeaderboard() {
         </div>
 
         <p className="mt-3 text-[11px] text-slate-500">
-          * Rankings are based on total XP, then rank, then earliest entry in
+          * Rankings are based on total XP, then level, then earliest entry in
           the guild records.
         </p>
       </div>
